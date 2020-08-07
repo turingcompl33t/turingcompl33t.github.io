@@ -1,19 +1,24 @@
-
-.highlight {
+// configuration for code block wrapper
+pre.highlight {
   background-color: #efefef;
   padding: 7px 7px 7px 10px;
   border: 1px solid #ddd;
-  -moz-box-shadow: 3px 3px rgba(0,0,0,0.1);
-  -webkit-box-shadow: 3px 3px rgba(0,0,0,0.1);
-  box-shadow: 3px 3px rgba(0,0,0,0.1);
   margin: 20px 0 20px 0;
-  overflow: scroll;
+  overflow: auto;
+  font-size: 16px;
 }
 
+// configuration for all code text (inline, block)
 code {
   font-family:'Bitstream Vera Sans Mono','Courier', monospace;
 }
 
+// configuration for inline code
+code.language-plaintext {
+  color: #DC322F
+}
+
+// syntax highlighting support for code blocks
 .highlight .c { color: #586E75 } /* Comment */
 .highlight .err { color: #93A1A1 } /* Error */
 .highlight .g { color: #93A1A1 } /* Generic */
