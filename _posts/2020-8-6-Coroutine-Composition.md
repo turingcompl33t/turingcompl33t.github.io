@@ -17,6 +17,12 @@ For a more complete, production-quality `task` implementation, see the [`task.hp
 
 ### Introduction: What is a `task`?
 
+In general, asynchronous programming terms, a _task_ is a lazily-evaluated asynchronous computation. The _asynchronous_ portion of this definition implies that the evaluation of a task may take place whilst other work is being performed in the system and that we may have many tasks active simultaneously while the _lazy_ nature of a task implies that the computation required by the task is not started until we are certain that its value will be required by some higher-level component in the system.
+
+You would be correct in thinking that this definition sounds an awful lot like certain asynchronous programming primitives already available in C++, namely `std::future`. We can launch a task with `std::async()` which returns a `std::future` for the result of the task (alternatively, we could launch the task manually and subsequently obtain the `std::future` from a `std::promise` we create via `std::promise::get_future()`). However, there are a [number](https://www.youtube.com/watch?v=QIHy8pXbneI) [of](https://eli.thegreenplace.net/2016/the-promises-and-challenges-of-stdasync-task-based-parallelism-in-c11/) [reasons](https://bartoszmilewski.com/2009/03/03/broken-promises-c0x-futures/) that `std::future` fails to meet the requirements necessary for a robust task-based parallelism abstraction for C++., namely the obvious performance concerns and the current inability to easily compose them.
+
+The introduction of coroutines allow us to make significant progress towards true task-based parallelism, and the `task` type we implement here might serve as a fundamental building block in a larger library of parallel programming abstractions.
+
 ### Basic Usage of the `task` Type
 
 Before exploring the nature of coroutine composition, let's first ensure that we understand the basics of how the `task` type behaves. The header `task_v0.hpp` contains the definition of a barebones `task` type. We'll start at the top-level `task` type and work our way down through both `task_promise` and `task_awaiter` to ensure that we understand all of the moving pieces.
@@ -220,11 +226,17 @@ Now, when `completes_synchronously()` subsequently completes and immediately ret
 
 We might think that it would make sense at this point for `coro_0()` to resume `coro_1()` (and so on down to `coro_2()`) because the `co_await` in these coroutines has also been satisfied, but `coro_0()` has no _obligation_ to resume the `task` upon which it `co_await`ed - all `coro_0()` "knows" is that the wait was satisfied, nothing more about the state of execution of `coro_1()`.
 
-The missing piece of our implementation emerges from the preceding paragraph; what we need to fix our `task` type is some way by which a `task`-returning coroutine may immediately resume execution of its caller upon completion. This way, when a `co_await` on a `task` is satisfied, the coroutine that is performing the `co_await` may immediately be resumed by the `task` once it completes.
+This situation should help to develop an intuition for an extremely important concept when programming with C++ coroutines: when a coroutine suspends, it is up to that coroutine to schedule itself for resumption at some point in the future. In our current implementation, all three of our coroutines suspend their execution with a `co_await`, but they do not take any steps to ensure that they will be later resumed; the only reason that we see `coro_0` complete is the top-level "external" resumption of this coroutine by the call to `task::resume()` in `main()`, but this facility does nothing for the nested coroutines `coro_1()` and `coro_2()`. 
+
+The missing piece of our implementation emerges from the preceding paragraphs; what we need to fix our `task` type is some way by which a `task`-returning coroutine may immediately resume execution of its caller upon completion. This way, when a `co_await` on a `task` is satisfied, the coroutine that is performing the `co_await` may immediately be resumed by the `task` once it completes.
 
 ### Composing Coroutines with `task`: Adding Continuations
 
-The addition that we need is called a _continuation_. The code changes required to implement continuations for our `task` type are relatively minor and all take place within the `task_promise` and `task_awaiter` types.
+The addition that we need is called a _continuation_. Continuations are another general concept in asynchronous programming that allow one to express the idea: "do Y once X completes." A more familiar example of a continuation is the `.then()` method of a `future` (as yet still missing from the standard library implementation but available in `boost::future`) which allows one to chain the next computation that should be performed with the result of the `future` instead of blocking with a call to `.get()`. 
+
+With coroutines, adding continuations to the `task` type means that we need to implement some mechanism by which `task` B, after being launched by a `co_await` in `task` A, may subsequently resume execution of the coroutine associated with `task` A once it completes.
+
+The code changes required to implement continuations for our `task` type are relatively minor and all take place within the `task_promise` and `task_awaiter` types.
 
 First, the `task_awaiter`. The only change here is in the `await_suspend()` member:
 
@@ -284,10 +296,6 @@ The updated implementation of the `task` type is included in the `task_v1.hpp` h
 [main] exit
 ```
 
-### Limitations
-
-Note that there is a race condition here.
-
 ### Concluding Thoughts
 
-Coroutines are dope.
+In this post we explored the basics of coroutine composition by developing a `task` type that supports continuations. While simple and not sufficiently robust to be used in production code, our `task` type demonstrates many of the concepts that one must understand and internalize in order to write programs that make effective use of asynchrony and coroutines.
