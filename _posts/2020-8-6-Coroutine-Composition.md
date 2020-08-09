@@ -17,11 +17,11 @@ For a more complete, production-quality `task` implementation, see the [`task.hp
 
 ### Introduction: What is a `task`?
 
-In general, asynchronous programming terms, a _task_ is a lazily-evaluated asynchronous computation. The _asynchronous_ portion of this definition implies that the evaluation of a task may take place whilst other work is being performed in the system and that we may have many tasks active simultaneously while the _lazy_ nature of a task implies that the computation required by the task is not started until we are certain that its value will be required by some higher-level component in the system.
+In general, asynchronous programming terms, a _task_ is merely a unit of work. For our purposes here, we'll be slightly more specific and define a task as a lazily-evaluated asynchronous computation. The _asynchronous_ portion of this definition implies that the evaluation of a task may take place whilst other work is being performed in the system and that we may have many tasks active simultaneously while the _lazy_ nature of a task implies that the computation required by the task is not started until we are certain that its value will be required by some higher-level component in the system.
 
-You would be correct in thinking that this definition sounds an awful lot like certain asynchronous programming primitives already available in C++, namely `std::future`. We can launch a task with `std::async()` which returns a `std::future` for the result of the task (alternatively, we could launch the task manually and subsequently obtain the `std::future` from a `std::promise` we create via `std::promise::get_future()`). However, there are a [number](https://www.youtube.com/watch?v=QIHy8pXbneI) [of](https://eli.thegreenplace.net/2016/the-promises-and-challenges-of-stdasync-task-based-parallelism-in-c11/) [reasons](https://bartoszmilewski.com/2009/03/03/broken-promises-c0x-futures/) that `std::future` fails to meet the requirements necessary for a robust task-based parallelism abstraction for C++., namely the obvious performance concerns and the current inability to easily compose them.
+You would be correct in thinking that this definition sounds an awful lot like certain asynchronous programming primitives already available in C++, namely `std::future`. We can launch a task with `std::async()` which returns a `std::future` for the result of the task (alternatively, we could launch the task manually and subsequently obtain the `std::future` from a `std::promise` we create via `std::promise::get_future()`). However, there are a [number](https://www.youtube.com/watch?v=QIHy8pXbneI) [of](https://eli.thegreenplace.net/2016/the-promises-and-challenges-of-stdasync-task-based-parallelism-in-c11/) [reasons](https://bartoszmilewski.com/2009/03/03/broken-promises-c0x-futures/) that `std::future` fails to meet the requirements necessary for a robust task-based parallelism abstraction for C++., namely the obvious performance concerns and the current inability to easily compose them. The most important thing to understand about tasks is that distinct tasks do not necessarily imply distinct _execution contexts_, the most familiar of which would be an operating system thread. This implies that many tasks are capable of sharing the same execution context which (often) greatly reduces the overhead of creating new tasks and destroying them when they complete. 
 
-The introduction of coroutines allow us to make significant progress towards true task-based parallelism, and the `task` type we implement here might serve as a fundamental building block in a larger library of parallel programming abstractions.
+The introduction of coroutines allow us to make significant progress towards true task-based parallelism, and the `task` type we implement here serves as a fundamental building block in the larger space of parallel programming abstractions.
 
 ### Basic Usage of the `task` Type
 
@@ -71,9 +71,9 @@ bool resume()
 }
 ```
 
-This function is only here so that we can manually resume the root `task` in our example program. A production `task` implementation would likely not implement such a method because, in general, we don't want to be manually driving our `task`s; instead, we would rely upon some other event source, such as an IO reactor servicing network requests to resume suspended `task`s and drive them forward.
+This function is only here so that we can manually resume the root `task` in our example program. A production `task` implementation would likely not implement such a method because, in general, we don't want to be manually driving our `task`s; instead, we would rely upon some other event source, such as an IO reactor servicing network requests to resume suspended `task`s and drive them toward completion.
 
-Next up is the `task_awaiter` type. In the case of `task_awaiter`, the three member functions we are required to implement the `awaiter` interface are trivial:
+Next up is the `task_awaiter` type. In the case of `task_awaiter`, the three member functions required to implement the `awaiter` interface are trivial:
 
 ```c++
 bool await_ready()
@@ -89,9 +89,9 @@ void await_suspend(coro_handle_type awaiting_coro_)
 void await_resume() {}
 ```
 
-The `task_awaiter` unconditionally reports that it is not ready in its `await_ready()` member. In `await_suspend()`, we unconditionally resume the coroutine to which this `awaiter` is attached, and subsequently yield control back to the caller (indicated by the `void` return type of `await_suspend()`). In `await_resume()` we are given the opportunity to determine the final result of the `co_await` expression that created this `task_awaiter`, but our `task` type does not return a value, so it does not make sense to return anything here, so we do nothing.
+The `task_awaiter` unconditionally reports that it is not ready in its `await_ready()` member. In `await_suspend()`, we unconditionally resume the coroutine to which this `awaiter` is attached, and subsequently yield control back to the caller (indicated by the `void` return type of `await_suspend()`). In `await_resume()` we are given the opportunity to determine the final result of the `co_await` expression that created this `task_awaiter`, but our `task` type does not return a value, so it does not make sense to return anything here, hence we do nothing.
 
-The final piece of the puzzle is the `task_promise` type which determines the properties of any coroutine that returns our `task` type.
+The final piece of the puzzle is the `task_promise` type which determines the properties of any coroutine that returns our `task`.
 
 The `get_return_object()` member simply constructs a new `task` from a coroutine handle to the associated coroutine:
 
@@ -107,16 +107,16 @@ We return `suspend_always{}` from our `initial_suspend()` member in order to ens
 ```c++
 auto initial_suspend()
 {
-    return coro::suspend_always{};
+    return stdcoro::suspend_always{};
 }
 ```
 
-Our `final_suspend()` also returns `suspend_always{}` to ensure that our `task` is a proper RAII wrapper; we want the coroutine frame for the coroutine associated with a `task` to remain "alive" until the `task` has been destroyed. If we instead specified `suspend_always{}` here, the coroutine frame would be destroyed immediately after execution of the body of the coroutine completed and we would no longer have control over the lifetime of the coroutine frame.
+Our `final_suspend()` also returns `suspend_always{}` to ensure that our `task` is a proper RAII wrapper; we want the coroutine frame for the coroutine associated with a `task` to remain "alive" until the `task` has been destroyed. If we instead specified `suspend_never{}` here, the coroutine frame would be destroyed immediately after execution of the body of the coroutine completed and we would no longer have control over the lifetime of the coroutine frame.
 
 ```c++
 auto final_suspend()
 {
-    return coro::suspend_always{};
+    return stdcoro::suspend_always{};
 }
 ```
 
@@ -133,12 +133,12 @@ void unhandled_exception() noexcept
 
 This is all that is required to implement a simple `task` type that enables lazy, asynchronous computation. 
 
-Now that we've walked through the internals of the type, let's take it for a spin. The `example0.cpp` program employs our `task` type in a very straightforward setting. we define a single coroutine `async_task()` that returns a `task` object. In the body of the `async_task()` coroutine we simply suspend execution of the coroutine once by `co_await`ing on `suspend_always{}`. 
+Now that we've walked through the internals of the type, let's take it for a spin. The `example0.cpp` program employs our `task` type in a very straightforward setting. We define a single coroutine `async_task()` that returns a `task` object. In the body of the `async_task()` coroutine we simply suspend execution of the coroutine once by `co_await`ing on `suspend_always{}`. 
 
 ```c++
 task async_task()
 {
-    co_await coro::suspend_always{};
+    co_await stdcoro::suspend_always{};
 }
 ```
 
@@ -215,24 +215,24 @@ If we run the `example1` program, the following output is produced:
 
 If you're anything like me, this result might surprise you the first time you see it. What happened here? All three of our coroutines began execution of their bodies as we would expect, and the `completes_synchronously()` coroutine runs to completion synchronously (as the name implies), but after this we only see the statement that acknowledges resumption of the coroutine `coro_0()` and the `coro_1()` and `coro_2()` coroutines are never resumed and thus never complete. 
 
-What one might _expect_ to see (or perhaps _want_ to see) is resumption of `coro_2()` after `completes_synchronously()` completes, followed by `coro_1()`, and finally `coro_0()` - as if our coroutines formed a structure that was built up and subsequently torn down according to the same rules. But this expectation is belies a fundamental misunderstanding of the way coroutines work, and to see this we need only more closely consider the execution flow of the program in question.
+What one might _expect_ to see (or perhaps _want_ to see) is resumption of `coro_2()` after `completes_synchronously()` completes, followed by `coro_1()`, and finally `coro_0()` - as if our coroutines formed a structure that was built up and subsequently torn down according to the same rules. But this expectation is a symptom of a misunderstanding of the way coroutines work, and to see this we need only more closely consider the execution flow of our example program.
 
 The traversal "down" the coroutine chain is uninteresting and proceeds exactly as one would expect. At the bottom of the stack, `coro_2()` waits on the result of `completes_synchronously()` with `co_await` to begin execution of this synchronous task. It is important to realize here, however, that the statement `co_await completes_synchronously()` has two implications for `coro_2()`:
 
 1. It suspends execution of `coro_2()` and
 2. It transfers control to `completes_synchronously()`
 
-Now, when `completes_synchronously()` subsequently completes and immediately returns to `coro_2()`, the coroutine _is still suspended_ and thus cannot resume its execution even though the `task` upon which it `co_await`ed is complete. In this way, control flow propagates all the way back up to `main()` where the second "issue" arises. In `main()`, we only have access to the `task` created by the call to `coro_0()`, and when we invoke `task::resume()` on this `task`, naturally it is `coro_0()` that is resumed. 
+Now, when `completes_synchronously()` subsequently completes and immediately returns to its caller, `coro_2()` _is still suspended_ and thus cannot resume its execution even though the `task` upon which it `co_await`ed is complete. In this way, control flow propagates all the way back up to `main()` where the second "issue" arises. In `main()`, we only have access to the `task` created by the call to `coro_0()`, and when we invoke `task::resume()` on this `task`, naturally it is `coro_0()` that is resumed. 
 
-We might think that it would make sense at this point for `coro_0()` to resume `coro_1()` (and so on down to `coro_2()`) because the `co_await` in these coroutines has also been satisfied, but `coro_0()` has no _obligation_ to resume the `task` upon which it `co_await`ed - all `coro_0()` "knows" is that the wait was satisfied, nothing more about the state of execution of `coro_1()`.
+We might think that it would make sense at this point for `coro_0()` to resume `coro_1()` (and so on down to `coro_2()`) because the `co_await` in these coroutines has also been satisfied, but `coro_0()` has no _responsibility_ and indeed not even an _ability_ to resume the `task` upon which it `co_await`ed - all `coro_0()` "knows" is that the wait was satisfied, nothing more about the state of execution of `coro_1()`.
 
-This situation should help to develop an intuition for an extremely important concept when programming with C++ coroutines: when a coroutine suspends, it is up to that coroutine to schedule itself for resumption at some point in the future. In our current implementation, all three of our coroutines suspend their execution with a `co_await`, but they do not take any steps to ensure that they will be later resumed; the only reason that we see `coro_0` complete is the top-level "external" resumption of this coroutine by the call to `task::resume()` in `main()`, but this facility does nothing for the nested coroutines `coro_1()` and `coro_2()`. 
+This situation should help to develop an intuition for an extremely important concept when programming with C++ coroutines: when a coroutine suspends, it is up to that coroutine to schedule itself for resumption at some point in the future. In our current implementation, all three of our coroutines suspend their execution with a `co_await`, but they do not take any steps to ensure that they will later be resumed; the only reason that we see `coro_0` complete is the top-level "external" resumption of this coroutine by the call to `task::resume()` in `main()`, but this facility does nothing for the nested coroutines `coro_1()` and `coro_2()`. 
 
 The missing piece of our implementation emerges from the preceding paragraphs; what we need to fix our `task` type is some way by which a `task`-returning coroutine may immediately resume execution of its caller upon completion. This way, when a `co_await` on a `task` is satisfied, the coroutine that is performing the `co_await` may immediately be resumed by the `task` once it completes.
 
 ### Composing Coroutines with `task`: Adding Continuations
 
-The addition that we need is called a _continuation_. Continuations are another general concept in asynchronous programming that allow one to express the idea: "do Y once X completes." A more familiar example of a continuation is the `.then()` method of a `future` (as yet still missing from the standard library implementation but available in `boost::future`) which allows one to chain the next computation that should be performed with the result of the `future` instead of blocking with a call to `.get()`. 
+The addition that we need is called a _continuation_. Continuations are another general concept in asynchronous programming that allow one to express the idea: "do Y once X completes." A more familiar example of a continuation is the `.then()` method of a `future` (as yet still missing from the standard library implementation but available in other libraries e.g. `boost::future`) which allows one to chain the next computation that should be performed with the result of the `future` instead of blocking with a call to `.get()`. 
 
 With coroutines, adding continuations to the `task` type means that we need to implement some mechanism by which `task` B, after being launched by a `co_await` in `task` A, may subsequently resume execution of the coroutine associated with `task` A once it completes.
 
@@ -241,7 +241,7 @@ The code changes required to implement continuations for our `task` type are rel
 First, the `task_awaiter`. The only change here is in the `await_suspend()` member:
 
 ```c++
-void await_suspend(std::coroutine_handle<> awaiting_coro)
+void await_suspend(stdcoro::coroutine_handle<> awaiting_coro)
 {
     coro_handle.promise().continuation = awaiting_coro;
     coro_handle.resume()
@@ -281,7 +281,7 @@ auto final_suspend()
 
 Whereas in our previous implementation `final_suspend()` returned `suspend_always{}` to unconditionally suspend itself at the coroutine's _final suspend label_, we now return a `final_awaiter` type that implements the `awaiter` interface. Now when a `task`-returning coroutine completes and the compiler implicitly inserts the call to `co_await p.await_suspend()` (where `p` is the notional `promise` object for the coroutine), the `await_suspend()` member of the `final_awaiter` is invoked and, if a continuation has been registered by way of another coroutine `co_await`ing on the current one, the awaiting coroutine is immediately resumed via the coroutine handle stored in the promise.
 
-The updated implementation of the `task` type is included in the `task_v1.hpp` header. The `example2.cpp` program is identical to `example1.cpp` apart from the fact that it utilizes the updated `task` implementation. Executing `example2` produces the desired output:
+The updated implementation of the `task` type is included in the `task_v1.hpp` header. The `example2.cpp` program is identical to `example1.cpp` apart from the fact that it utilizes the updated `task` implementation. Executing `example2` demonstrates the desired behavior for our `task`:
 
 ```
 [main] enter
