@@ -236,4 +236,143 @@ Executing `awaitable` without arguments produces output identical to that of `va
 
 ### OSX: `kqueue`
 
+Next up is an implementation of `awaitable_timer` on OSX backed by `kqueue`. 
+
+`kqueue` is the native event-notification system on several operating systems including OSX and many BSD variants. Like `epoll` on Linux, `kqueue` is a readiness-based system in which we (application programmers) register interest in kernel events and then are able to wait on notification from the kernel when these events occurs. However, `kqueue` presents a slightly more general interface by introducing the notion of a `kevent`s - a tuple of a unique identifier, a _filter_ that describes the events of interest for the identifier, and (optionally) some user-provided context to associate with the identifier. Internally, the `kqueue` system uses the filter for each `kevent` to determine if the `kevent` is "ready" and, if it is, inserts the `kevent` onto the `kqueue` so that application code can later retrieve it.
+
+The core API for `kqueue` consists of just two system calls:
+
+- `kqueue()`: This call constructs a new `kqueue` instance and returns a file descriptor that refers to this instance. 
+- `kevent()` This call is used to both register new `kevent`s with the `kqueue` instance as well as query any notified `kevent`s that are already associated with the instance. In a way, the `kevent` system call behaves like a combination of both `epoll_ctl()` and `epoll_wait()`.
+
+Another major difference between the `epoll` API and the `kqueue` API is that `kqueue` has 'built-in" support for timers in the form of a timer filter. That is, whereas with `epoll` we had to use the `timerfd` API to construct a timer, associate this timer with the `epoll` instance, and subsequently wait for readiness of the timer via a call to `epoll_wait()`, with `kqueue` we need only specify the timer filter (`EVFILT_TIMER`) in a call to `kevent()` to add a new timer `kevent` to the kernel-maintained `kqueue` instance. Note that if you search for the OSX `kqueue` API (e.g. via Google) the Apple developer manual pages result erroneously states that the `EVFILT_TIMER` filter is not supported on OSX. 
+
+As in the `epoll` example, the program `vanilla.cpp` demonstrates basic usage of the `kqueue` API to wait for system timer events. The setup is very similar to that used in the `epoll` example, so we'll only cover the `kqueue`-specific divergences here.
+
+First, we create a new `kqueue` instance via the `kqueue()` system call.
+
+```c++
+auto instance = unique_fd{::kqueue()};
+if (!instance)
+{
+    throw system_error{};
+}
+```
+
+Next, we use the `kevent()` system call to register a new `kevent` with the `kqueue` instance. Here, `ident` is simply a unique identifier for the event that is completely at our discretion. The `EVFILT_TIMER` member of the structure is the built-in filter that was described above, the `EV_ADD` flag specifies that we are registering new interest in this `kevent` (note that `EV_ADD` also implicitly adds the `EV_ENABLE` flag), and the `NOTE_USECONDS` setting for the `fflags` member specifies that the timeout that we specify in the `data` member is in microseconds. We do not utilize the optional `udata` member of the structure to pass additional context to the `kevent`. 
+
+```c++
+struct kevent ev = {
+    .ident  = ident,
+    .filter = EVFILT_TIMER,
+    .flags  = EV_ADD,
+    .fflags = NOTE_USECONDS,
+    .data   = us.count(),
+    .udata  = nullptr
+};
+
+int const result = ::kevent(instance, &ev, 1, nullptr, 0, nullptr);
+if (-1 == result)
+{
+    throw system_error{};
+}
+```
+
+The default behavior with the `EVFILT_TIMER` filter is to establish a periodic timer. This implies that the code above registers a `kevent` that will be inserted into the `kqueue` every `us.count()` microseconds until we disable manually.
+
+Finally, we use the `kevent()` system call once more to wait for notification that the timer `kevent` has been inserted into the `kqueue`.
+
+```c++
+struct kevent ev{};
+
+for (auto i = 0ul; i < n_reps; ++i)
+{
+    int const n_events = ::kevent(instance, nullptr, 0, &ev, 1, nullptr);
+    if (-1 == n_events)
+    {
+        puts("[-] kevent() error");
+        break;
+    }
+
+    if (ident == ev.ident)
+    {
+        puts("[+] timer fired");
+    }
+
+    // something strange happened...
+}
+```
+
+The overall structure of this program should feel very similar to that presented in the previous section with `epoll`. Running the `vanilla` executable without arguments goes through the steps above, waits for five notifications of the timer, and finally breaks the reactor loop and cleans up.
+
+```c++
+$ ./vanilla
+[+] timer fired
+[+] timer fired
+[+] timer fired
+[+] timer fired
+[+] timer fired
+```
+
+Constructing an `awaitable_timer` type on top of this API is straightforward; the implementation closely resembles that presented in the `epoll` example. Specifically, the `operator co_await()` member of the `awaitable_timer` is nearly identical to the one we saw previously:
+
+```c++
+// awaitable_timer
+auto operator co_await()
+{
+    struct awaiter
+    {
+        awaitable_timer& me;
+
+        awaiter(awaitable_timer& me_)
+            : me{me_} {}
+
+        bool await_ready() { return false; }
+
+        bool await_suspend(stdcoro::coroutine_handle<> awaiting_coro)
+        {
+            me.async_ctx.awaiting_coro = awaiting_coro;
+            return me.arm_timer();
+        }
+
+        void await_resume() {}
+    };
+
+    return awaiter{*this};
+}
+```
+
+The only distinction here is in the implementation of `arm_timer()`. Whereas in the `vanilla.cpp` program we relied on the periodic nature of the timer `kevent`, here we only want the timer to fire once and not be re-inserted into the `kqueue` until we arm it again when the timer is `co_await`ed upon. We accomplish this behavior by specifying the `EV_ONESHOT` flag when we register the `kevent` with the `kqueue` instance:
+
+```c++
+// awaitable_timer
+bool arm_timer()
+{
+    struct kevent ev = {
+        .ident  = ident,
+        .filter = EVFILT_TIMER,
+        .flags  = EV_ADD | EV_ONESHOT,
+        .fflags = NOTE_USECONDS,
+        .data   = timeout.count(),
+        .udata  = &async_ctx
+    };
+
+    int const result = ::kevent(ioc, &ev, 1, nullptr, 0, nullptr);
+    return (result != -1);
+}
+```
+
+Usage of the `awaitable_timer` type is identical to that shown in the `epoll` example.
+
+```c++
+awaitable_timer timer{ioc, 0, 3s};
+
+for (auto i = 0ul; i < n_reps; ++i)
+{
+    co_await timer;
+
+    puts("[+] timer fired");
+}
+```
+
 ### Windows: The Windows Threadpool
