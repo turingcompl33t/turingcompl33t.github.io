@@ -5,6 +5,24 @@ title: "Awaitable System Timers"
 
 Coroutines enable various interesting asynchronous programming constructs on their own; `co_await`able synchronization primitives are one such example. However, the power of coroutines really comes through when we integrate them with some external event source. In this post we will look at doing just by constructing an `awaitable_timer` type that utilizes the underlying system's native timer facilities to delay resumption of the coroutine until after some delay has elapsed.
 
+### The Interface
+
+```c++
+task<void> async_work()
+{
+    awaitable_timer two_seconds{2s};
+
+    // do some work
+
+    // suspend this coroutine for two seconds
+    co_await two_seconds;
+
+    // do more work
+}
+```
+
+### Different Systems, Different Timers
+
 Naturally, the timer facilities available to our program vary widely based on the operating system on which our program runs. In order to get a feel for how coroutines may be integrated with different OS APIs, I've implemented the `awaitable_timer` construct on three different platforms utilizing each system's native API for asynchronous event management:
 
 - Linux backed by `epoll` and `timerfd`
@@ -376,3 +394,61 @@ for (auto i = 0ul; i < n_reps; ++i)
 ```
 
 ### Windows: The Windows Threadpool
+
+There are a number of viable ways to create waitable system timers on Windows, and these different mechanisms significantly influence the approach that we take to making these timers compatible with coroutines.
+
+The most obvious method for creating timers on Windows is via the [waitable timer interface](https://docs.microsoft.com/en-us/windows/win32/sync/waitable-timer-objects). With Win32 waitable timers, we create and set a timer via calls to `CreateWaitableTimer()` and `SetWaitableTimer()`, respectively, and we subsequently wait on expiration of the timer via `WaitForSingleObject()` (or one of its variants). Alternatively, one may register a callback function in the call to `SetWaitableTimer()` that will be invoked upon timer expiration. This latter technique sounds like exactly what we need for coroutine integration, but the mechanics of how the callback is invoked pose some issues. Specifically, the operating system does not directly invoke the provided callback function upon expiration of the timer, but instead queues an _Asynchronous Procedure Call_ (APC) to the queue of the thread that made the timer request (called `SetWaitableTimer()`). This mechanism introduces two problems:
+
+1. Standard Windows user APCs do not interrupt the currently executing instruction stream of the thread to which they are queued. Instead, APCs in the APC queue for a thread are only executed in the event that the thread enters an _alertable wait state_ (via a call to e.g. `SleepEx()`).
+2. The APC that notifies timer expiration is always queued to the thread that created the timer.
+
+These issues make it difficult to integrate waitable timers with coroutines via IO completion ports.
+
+In light of this difficulty, we'll explore an alternative method here: Windows threadpool timers.
+
+```c++
+io_context ioc{1};
+
+timer_context ctx{0ul, max_count, ioc.shutdown_handle()};
+
+// create the timer object
+auto timer_obj = ::CreateThreadpoolTimer(
+    on_timer_expiration, 
+    &ctx, 
+    ioc.env());
+if (NULL == timer_obj)
+{
+    throw system_error{};
+}
+```
+
+```c++
+FILETIME due_time{};
+timeout_to_filetime(2s, &due_time);
+
+::SetThreadpoolTimer(timer_obj, &due_time, 0, 0);
+```
+
+```c++
+void __stdcall on_timer_expiration(
+    PTP_CALLBACK_INSTANCE, 
+    void*     ctx, 
+    PTP_TIMER timer)
+```
+
+```c++
+if (++timer_ctx.count >= timer_ctx.max_count)
+{
+    ::SetEvent(timer_ctx.shutdown_handle);
+}
+```
+
+```c++
+else
+{
+    FILETIME due_time{};
+    timeout_to_filetime(2s, &due_time);
+
+    ::SetThreadpoolTimer(timer, &due_time, 0, 0);
+}
+```
