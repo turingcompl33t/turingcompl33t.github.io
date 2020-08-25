@@ -4,8 +4,6 @@ title: About
 permalink: /about/
 ---
 
-Some information about you!
+Greetings, and welcome to my blog!
 
-### More Information
-
-A place to include any other types of information that you'd like to include about yourself.
+This site serves as a publicly-accessible location wherein I document technical projects (typically programming-related) and share what I learn along the way with others. I hope you find the content interesting / useful!
