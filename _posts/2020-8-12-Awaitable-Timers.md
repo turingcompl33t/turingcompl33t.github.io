@@ -28,6 +28,7 @@ Naturally, the timer facilities available to our program vary widely based on th
 - Linux backed by `epoll` and `timerfd`
 - OSX backed `kqueue`
 - Windows backed by the Windows Threadpool
+- Windows backed by IO completion port
 
 ### Linux: `epoll` and `timerfd`
 
@@ -397,58 +398,115 @@ for (auto i = 0ul; i < n_reps; ++i)
 
 There are a number of viable ways to create waitable system timers on Windows, and these different mechanisms significantly influence the approach that we take in making these timers compatible with coroutines.
 
-The most obvious method for creating timers on Windows is via the [waitable timer interface](https://docs.microsoft.com/en-us/windows/win32/sync/waitable-timer-objects). However, some issues arise when attempting to integrate Windows waitable timers with an event multiplexing interface such as IO completion ports. It is possible to address these issues and utilize this approach successfully to build awaitable system timers, but it requires a significantly more involved implemention. We'll take a look at this approach in the subsequent section. For now, we'll look at a simpler approach that utilizes the Windows threadpool.
+The most obvious method for creating timers on Windows is via the [waitable timer interface](https://docs.microsoft.com/en-us/windows/win32/sync/waitable-timer-objects). However, some issues arise when attempting to integrate Windows waitable timers with an event multiplexing interface such as IO completion ports. It is possible to address these issues and utilize this approach successfully to build awaitable system timers, but it requires a significantly more involved implementation. We'll take a look at this approach in the subsequent section. For now, we'll look at a simpler approach that utilizes the Windows threadpool.
 
+The Windows threadpool API allows one to submit various types of requests to a pre-allocated pool of worker threads managed by the operating system. The API is [extensive](https://docs.microsoft.com/en-us/windows/win32/procthread/thread-pool-api), giving application-level programmers plenty of flexibility in working with the threadpool. Furthermore, because the threadpool is implemented by the operating system and has some components that run in the kernel, it is able to take advantage of information regarding the threadpool's current utilization to dynamically tune itself for optimal performance - something that would not be possible in a pure user-space threadpool implementation. See [this video] for more information regarding some of these optimizations.
 
+Among the types of operations supported by the Windows threadpool is the submission of timer requests. One creates a new threadpool timer object (not to be confused with a waitable timer object) with `CreateThreadpoolTimer()` and subsequently submits this timer to the threadpool with `SetThreadpoolTimer()`. We specify a callback during timer creation, and when the timeout specified in the call to `SetThreadpoolTimer()` expires, a threadpool worker thread executes the provided callback.
 
-In light of this difficulty, we'll explore an alternative method here: Windows threadpool timers.
+With that introduction out of the way, let's dive into integrating coroutines with the threadpool API. In the code samples that follow, I introduce an `io_context` type that wraps the Windows threadpool API. The definition of this type is unimportant in regards to coroutine integration with system timers; the class merely serves to encapsulate some (somewhat convoluted) logic that allows one to create a process-local threadpool rather than utilize the default system-wide threadpool.
+
+The core of the implementation appears in the `awaitable_timer.hpp` header which defines the `awaitable_timer` type. The constructor for the type accepts a reference to the `io_context` instance that represents the threadpool to which this timer instance should submit timer requests as well as the specific timeout for this timer.
 
 ```c++
-io_context ioc{1};
-
-timer_context ctx{0ul, max_count, ioc.shutdown_handle()};
-
-// create the timer object
-auto timer_obj = ::CreateThreadpoolTimer(
-    on_timer_expiration, 
-    &ctx, 
-    ioc.env());
-if (NULL == timer_obj)
+template <typename Duration>
+awaitable_timer(io_context& ioc_, Duration timeout_)
+    : ioc{ioc_}, timeout{}, timer{}, async_ctx{}
 {
-    throw system_error{};
+    // convert the specified timeout
+    timeout_to_filetime(timeout_, &timeout);
+
+    // create the underlying timer object
+    auto* timer_obj = ::CreateThreadpoolTimer(
+        on_timer_expiration, 
+        &async_ctx, 
+        ioc.env());
+
+    if (NULL == timer_obj)
+    {
+        throw coro::win::system_error{};
+    }
+
+    timer.reset(timer_obj);
 }
 ```
 
-```c++
-FILETIME due_time{};
-timeout_to_filetime(2s, &due_time);
+When the underlying timer object is created in the constructor of `awaitable_timer`, we specify `on_timer_expiration()` as the callback to be invoked on expiration of this timer and we specify that a pointer to our `async_ctx` member be provided as the optional context argument to this callback.
 
-::SetThreadpoolTimer(timer_obj, &due_time, 0, 0);
+Our `async_ctx` member is nothing more than a wrapper around a coroutine handle; it need not be a distinct type at all, but this approach does allow for simple refactors in the event that we decide that we want to pass additional context to the callback down the road. We will see later that this coroutine handle is set in the `await_suspend()` member of the `awaiter` type for `awaitable_timer` and thus represents a handle to the coroutine that `co_await`s on the timer's expiration.
+
+```c++
+struct async_context
+{
+    std::experimental::coroutine_handle<> awaiting_coro;
+};
 ```
 
+The `on_timer_expiration()` callback is a static member of the `awaitable_timer` type. Its signature is dictated by the `PTP_TIMER_CALLBACK` type and it receives both a pointer to the callback instance as well as a pointer to the timer object that triggered its invocation when it is called. However, for our purposes, we only care about the optional user-provided context that is provided to `on_timer_expiration()` in the form of an opaque pointer (`void*`). The only action that we take when the timer expires is extract the coroutine handle for the awaiting coroutine from the asynchronous context passed to the callback and subsequently resume the coroutine:
+
 ```c++
-void __stdcall on_timer_expiration(
+static void __stdcall on_timer_expiration(
     PTP_CALLBACK_INSTANCE, 
-    void*     ctx, 
-    PTP_TIMER timer)
-```
-
-```c++
-if (++timer_ctx.count >= timer_ctx.max_count)
+    void* ctx, 
+    PTP_TIMER)
 {
-    ::SetEvent(timer_ctx.shutdown_handle);
+    // resume the awaiting coroutine
+    auto& async_ctx = *reinterpret_cast<async_context*>(ctx);
+    async_ctx.awaiting_coro.resume();
 }
 ```
 
-```c++
-else
-{
-    FILETIME due_time{};
-    timeout_to_filetime(2s, &due_time);
+So we've seen how the coroutine that `co_await`s the timer is resumed, but how does the coroutine submit the timer and suspend itself in the first place? The `operator co_await()` member of `awaitable_timer` defers this work to the `timer_awaiter` type:
 
-    ::SetThreadpoolTimer(timer, &due_time, 0, 0);
+```c++
+timer_awaiter awaitable_timer::operator co_await()
+{
+    return timer_awaiter{*this};
 }
 ```
+
+As `awaiter`s go, `timer_awaiter` is not particularly complicated. As we saw above, it accepts a reference to the `awaitable_timer` instance with which it is associated in its constructor, which it subsequently utilizes in its `await_suspend()` implementation in order to set the awaiting coroutine handle for the `awaitable_timer` instance. Once it has accomplished this, `await_suspend()` submits the timer request to the threadpool with `SetThreadpoolTimer()` and unconditionally suspends the awaiting coroutine.
+
+```c++
+class timer_awaiter
+{
+    awaitable_timer& timer;
+public:
+    timer_awaiter(awaitable_timer& timer_)
+        : timer{timer_}
+    {}
+
+    bool await_ready()
+    {
+        return false;
+    }
+
+    void await_suspend(std::experimental::coroutine_handle<> awaiting_coro)
+    {
+        timer.async_ctx.awaiting_coro = awaiting_coro;
+        ::SetThreadpoolTimer(timer.timer.get(), &timer.timeout, 0, 0);
+    }
+
+    void await_resume() {}
+};
+```
+
+Usage of this `awaitable_timer` implementation is analogous to the previous usages we have seen - we simply construct a new timer instance that is associated with our `io_context` threadpool wrapper and subsequently `co_await` the timer.
+
+```c++
+awaitable_timer two_seconds{ioc, 2s};
+
+for (auto i = 0ul; i < n_reps; ++i)
+{   
+    co_await two_seconds;
+
+    puts("[+] timer fired");
+}
+```
+
+And that's all there is to it! The high-level nature of the Windows threadpool API makes integration with coroutines incredibly simple. However, if you compare this implementation with the `epoll` and `kqueue` examples we saw previously, we did lose something here: fine-grained control over the threads that drive execute our coroutines. After successfully `co_await`ing on an `awaitable_timer` instance, the body of the invoking coroutine will thereafter be executed by a thread that is managed by the Windows threadpool. This might be fine in some instances, and indeed ensures that system resources are utilized efficiently, but it lacks the "bring your own threads" level of control that was available in the `epoll` and `kqueue` models wherein we, the application programmer, were responsible for providing the threads that drove the reactor and ultimately resumed suspended coroutines.
+
+It is possible to regain this level of control on Windows, but doing so obviously necessitates that we ditch the threadpool API and migrate to managing timer expiration events with an IO completion port.
 
 ### Windows: Waitable Timers and IO Completion Ports
 
