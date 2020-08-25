@@ -512,13 +512,96 @@ It is possible to regain this level of control on Windows, but doing so obviousl
 
 IO completion ports are the standard for asynchronous event multiplexing on Windows. In contrast to interfaces like `epoll()` on Linux which supports a _readiness_ model, IO completion ports expose a _completion_ model. That is, whereas with `epoll()` we use `epoll_wait()` to wait for notification from the kernel that some file descriptor is ready for IO, with IO completion ports we initiate an IO request asynchronously (an operation that completes immediately) and subsequently wait for the operating system to notify us when the request eventually completes.
 
-In order to wait for asynchronous event completions with an IO completion port, one must first register an event source (represented by a Win32 `HANDLE`) with the completion port ...
+The fundamentals of the IO completion port API consists of the following operations:
 
-With Win32 waitable timers, we create and set a timer via calls to `CreateWaitableTimer()` and `SetWaitableTimer()`, respectively. When the timer expires, the timer object itself beomes _signalled_, meaning that we can wait on expiration of a particular timer instance via `WaitForSingleObject()` (or one of its variants). However, this mechanism does nothing for us in the context of integration with IO completion ports. 
+- Create a new IO completion port with `CreateIoCompletionPort()`; this function returns a handle to a new IO completion port object.
+- Register a handle with an existing IO completion port with `CreateIoCompletionPort()` (yes, the same function does both). The handle we register with the completion port is the handle for which we want to receive notifications on IO event completions. Many different handle types are supported, including regular (filesystem) files, sockets, pipes, etc. After registration with the completion port, we will receive notification of IO completion events on the handle we register via `GetQueuedCompletionStatus()` (see below).
+- Manually post completion events with `PostQueuedCompletionStatus()`. In contrast to events queued to the completion port via registered handles, this function allows us to manually post a completion event to the IO completion port. This functionality comes in handy for special-case events such as the handling of manual shutdown requests for server applications backed by a completion port.
+- Wait for completion events with `GetQueuedCompletionStatus()`. This function is typically invoked in a loop in order to repeatedly wait for a completion event and dispatch the corresponding action based on the event properties.
 
-Alternatively, one may register a callback function in the call to `SetWaitableTimer()` that will be invoked upon timer expiration. This latter technique sounds like exactly what we need for coroutine integration, but the mechanics of how the callback is invoked pose some issues. Specifically, the operating system does not directly invoke the provided callback function upon expiration of the timer, but instead queues an _Asynchronous Procedure Call_ (APC) to the queue of the thread that made the timer request (called `SetWaitableTimer()`). This mechanism introduces two problems:
+Now that we understand the basics of IO completion port interface, let's turn our attention to Win32 waitable timers and begin considering how we might integrate them with a completion port-backed reactor. 
 
-1. Standard Windows user APCs do not interrupt the currently executing instruction stream of the thread to which they are queued. Instead, APCs in the APC queue for a thread are only executed in the event that the thread enters an _alertable wait state_ (via a call to e.g. `SleepEx()`).
-2. The APC that notifies timer expiration is always queued to the thread that created the timer.
+With Win32 waitable timers, we create and set a timer via calls to `CreateWaitableTimer()` and `SetWaitableTimer()`, respectively. When the timer expires, the timer object itself becomes _signalled_, meaning that we can wait on expiration of a particular timer instance via `WaitForSingleObject()` (or one of its variants). However, this mechanism does nothing for us in the context of integration with IO completion ports because it does not wake a thread blocked on `GetQueuedCompletionStatus()`. Alternatively, one may register a callback function in the call to `SetWaitableTimer()` that will be invoked upon timer expiration. This latter technique sounds like exactly what we need for coroutine integration, but the mechanics of how the callback is invoked pose some issues. Specifically, the operating system does not directly invoke the provided callback function upon expiration of the timer, but instead queues an _Asynchronous Procedure Call_ (APC) to the queue of the thread that made the timer request (i.e. the one that called `SetWaitableTimer()`). This introduces two issues:
 
-These issues make it difficult to integrate waitable timers with coroutines via IO completion ports.
+1. Standard Windows user APCs do not interrupt the currently executing instruction stream of the thread to which they are queued. Instead, APCs in the APC queue for a thread are only executed in the event that the thread enters an _alertable wait state_ (via a call to e.g. `SleepEx()`). On its own, this is not a dealbreaker for integration with IO completion ports because the extended variant of `GetQueuedCompletionStatus()`, `GetQueuedCompletionStatusEx()`, supports alertable waits. 
+2. The APC that notifies timer expiration is always queued to the thread that created the timer. This implies that whichever thread calls `SetWaitableTimer()` in order to submit a timer request must also be the one that invokes the alertable wait function (`SleepEx()`, `GetQueuedCompletionStatusEx()`, etc.) that allows the thread to be notified on timer expiration.
+
+This second complication is the real dealbreaker because we would like to be able to suspend a coroutine by `co_await`ing on an `awaitable_timer` and have this coroutine resumed on a different thread - specifically one of the threads that is running the IO service.
+
+The source in [win-iocp](https://github.com/turingcompl33t/coroutines/tree/master/applications/timers/win-iocp) implements this approach. The code is significantly more involved than the previous examples so I won't cover the entirety of the implementation here, but I will highlight the salient points.
+
+The `timer_service` class encapsulates both the IO completion port that is capable of multiplexing arbitrary IO event completions as well as the auxiliary worker thread that is dedicated to managing timer submissions and expiration events.
+
+The constructor for the `timer_service` launches the timer worker thread which runs the `process_requests()` function as its entry point. In this function, the worker thread enters a loop where it blocks on a queue `pop()` operation and submits a timer request to the operating system whenever it successfully dequeues a request from the queue.
+
+```c++
+unsigned long __stdcall timer_service::process_requests(void* ctx)
+{
+    // retrieve the timer service context
+    auto& me = *reinterpret_cast<timer_service*>(ctx);
+
+    for (;;)
+    {
+        auto* req = me.requests.pop(TRUE);
+
+        ::SetWaitableTimer(
+            req->timer_object, 
+            reinterpret_cast<LARGE_INTEGER*>(&req->timeout), 
+            0,
+            on_timer_expiration,
+            req,
+            FALSE);
+    }
+}
+```
+
+Hidden behind this call to `requests.pop()` is the fact that the worker thread enters an alterable wait state while it waits on a nonempty queue. It is this alertable wait state that allows the timer worker thread to be notified by APCs when the timers that it submits eventually expire.
+
+```c++
+T* pop(BOOL alertable)
+{
+    ::WaitForSingleObjectEx(lock, INFINITE, alertable);
+    while (is_empty())
+    {
+        ::SignalObjectAndWait(lock, non_empty, INFINITE, alertable);
+        ::WaitForSingleObjectEx(lock, INFINITE, alertable);
+    }
+
+    // ...
+}
+```
+
+A coroutine submits a timer to the timer service by `co_await`ing on one of the `timer_service` members `timer_service::post_awaitable()` or `timer_service::post_awaitable_with_handle()`. In the `await_suspend()` member of the returned `timer_service::awaitable`, we create a new timer request and push it onto the queue of timer requests.
+
+```c++
+std::unique_ptr<timer_request> request = /* ... */
+
+// ...
+
+service.requests.push(request, FALSE);
+```
+
+As we saw above, the timer worker thread sits on the other end of this queue, constantly attempting to dequeue and submit new requests to the operating system. Notice here that we always pass the timer request to the timer worker thread for submission to the operating system so that it can subsequently be notified via APC when the timer expired; if instead an arbitrary thread executing a coroutine submitted the request to the operating system, the timer worker thread would not receive this notification.
+
+When a timer expires, the timer worker thread is notified via an APC and it invokes `on_timer_expiration()` callback function. In this function, the timer worker simply posts the timer completion event to the IO completion port so that it can be handled via the regular event dispatching logic.
+
+```c++
+void timer_service::on_timer_expiration(
+    void* ctx, 
+    unsigned long /* dwTimerLowValue  */, 
+    unsigned long /* dwTimerHighValue */)
+{
+    auto* req = reinterpret_cast<timer_request*>(ctx);
+
+    ::PostQueuedCompletionStatus(
+        req->port, 0, 0, reinterpret_cast<LPOVERLAPPED>(req));
+}
+```
+
+To complete the process, when a timer completion event is posted to the IO completion port, one of the threads that is currently executing `timer_service::run()` receives the notification that the timer expired via `GetQueuedCompletionStatus()` and subsequently invokes the callback function that is embedded in the request which, for requests initiated via a `co_await` on one of `timer_service::post_awaitable()` or `timer_service::post_awaitable_with_handle()`, consists of resuming the suspended coroutine. 
+
+Before wrapping up, There is one limitation to this approach that I want to address: while it functions correctly, this approach is inefficient in terms of its usage of operating system resources. Specifically, we create a new operating system timer object for every request made to the `timer_service`. In the trivial example programs, this is not an issue, but in larger applications that might see hundreds or thousands of concurrent outstanding timer requests, this might become a performance bottleneck. One way to address this limitation is to manage our own queue of outstanding timer requests at the application level, and only ever have a single timer object that is managed at the operating system level for the timer with the earliest due time. This is the approach taken in more robust IO service implementations, such as the one provided by [Boost.Asio](https://think-async.com/Asio/) and that provided in the [CppCoro](https://github.com/lewissbaker/cppcoro/blob/master/lib/io_service.cpp) library.
+
+### Concluding Thoughts
+
+We covered a lot of ground in this post. My hope is that it provides a broad overview of the various asynchronous event mulitplexing APIs provided by various operating systems and the way in which the distinctions between these APIs influence how we integrate coroutines with operating system services. Understanding the details of implementing this integration lays a solid foundation for developing coroutine support for other IO interfaces such as pipes and network sockets. 
