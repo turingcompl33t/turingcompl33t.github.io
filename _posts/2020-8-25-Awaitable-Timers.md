@@ -3,9 +3,9 @@ layout: post
 title: "Awaitable System Timers"
 ---
 
-C++20 coroutines enable various interesting asynchronous programming constructs on their own such as `co_await`able synchronization primitives and generator functions, to name a couple. However, the power of coroutines really shines when we integrate them with some external event source. 
+C++20 coroutines enable many interesting asynchronous programming constructs of their own accord, including `co_await`able synchronization primitives, generator functions, and asynchronous algorithms, to name just a few. However, the power of coroutines really shines when we integrate them with an external event source such as IO completions or timer expirations.
 
-In this post we will look at doing just this by constructing an `awaitable_timer` type that utilizes the underlying system's native timer facilities to delay resumption of the coroutine until after some delay has elapsed. While this may not seem like a particulary useful primitive on its own, the concepts that we'll cover will be generally applicable to integrating coroutines with asynchronous system events.
+In this post we will explore the latter subject by constructing an `awaitable_timer` type that utilizes the underlying system's native timer facilities to delay resumption of a coroutine until after some delay has elapsed. While this may not seem like a particulary useful primitive on its own, the concepts that we'll cover will be generally applicable to integrating coroutines with any asynchronous system event.
 
 ### The Interface
 
