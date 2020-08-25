@@ -395,14 +395,11 @@ for (auto i = 0ul; i < n_reps; ++i)
 
 ### Windows: The Windows Threadpool
 
-There are a number of viable ways to create waitable system timers on Windows, and these different mechanisms significantly influence the approach that we take to making these timers compatible with coroutines.
+There are a number of viable ways to create waitable system timers on Windows, and these different mechanisms significantly influence the approach that we take in making these timers compatible with coroutines.
 
-The most obvious method for creating timers on Windows is via the [waitable timer interface](https://docs.microsoft.com/en-us/windows/win32/sync/waitable-timer-objects). With Win32 waitable timers, we create and set a timer via calls to `CreateWaitableTimer()` and `SetWaitableTimer()`, respectively, and we subsequently wait on expiration of the timer via `WaitForSingleObject()` (or one of its variants). Alternatively, one may register a callback function in the call to `SetWaitableTimer()` that will be invoked upon timer expiration. This latter technique sounds like exactly what we need for coroutine integration, but the mechanics of how the callback is invoked pose some issues. Specifically, the operating system does not directly invoke the provided callback function upon expiration of the timer, but instead queues an _Asynchronous Procedure Call_ (APC) to the queue of the thread that made the timer request (called `SetWaitableTimer()`). This mechanism introduces two problems:
+The most obvious method for creating timers on Windows is via the [waitable timer interface](https://docs.microsoft.com/en-us/windows/win32/sync/waitable-timer-objects). However, some issues arise when attempting to integrate Windows waitable timers with an event multiplexing interface such as IO completion ports. It is possible to address these issues and utilize this approach successfully to build awaitable system timers, but it requires a significantly more involved implemention. We'll take a look at this approach in the subsequent section. For now, we'll look at a simpler approach that utilizes the Windows threadpool.
 
-1. Standard Windows user APCs do not interrupt the currently executing instruction stream of the thread to which they are queued. Instead, APCs in the APC queue for a thread are only executed in the event that the thread enters an _alertable wait state_ (via a call to e.g. `SleepEx()`).
-2. The APC that notifies timer expiration is always queued to the thread that created the timer.
 
-These issues make it difficult to integrate waitable timers with coroutines via IO completion ports.
 
 In light of this difficulty, we'll explore an alternative method here: Windows threadpool timers.
 
@@ -452,3 +449,18 @@ else
     ::SetThreadpoolTimer(timer, &due_time, 0, 0);
 }
 ```
+
+### Windows: Waitable Timers and IO Completion Ports
+
+IO completion ports are the standard for asynchronous event multiplexing on Windows. In contrast to interfaces like `epoll()` on Linux which supports a _readiness_ model, IO completion ports expose a _completion_ model. That is, whereas with `epoll()` we use `epoll_wait()` to wait for notification from the kernel that some file descriptor is ready for IO, with IO completion ports we initiate an IO request asynchronously (an operation that completes immediately) and subsequently wait for the operating system to notify us when the request eventually completes.
+
+In order to wait for asynchronous event completions with an IO completion port, one must first register an event source (represented by a Win32 `HANDLE`) with the completion port ...
+
+With Win32 waitable timers, we create and set a timer via calls to `CreateWaitableTimer()` and `SetWaitableTimer()`, respectively. When the timer expires, the timer object itself beomes _signalled_, meaning that we can wait on expiration of a particular timer instance via `WaitForSingleObject()` (or one of its variants). However, this mechanism does nothing for us in the context of integration with IO completion ports. 
+
+Alternatively, one may register a callback function in the call to `SetWaitableTimer()` that will be invoked upon timer expiration. This latter technique sounds like exactly what we need for coroutine integration, but the mechanics of how the callback is invoked pose some issues. Specifically, the operating system does not directly invoke the provided callback function upon expiration of the timer, but instead queues an _Asynchronous Procedure Call_ (APC) to the queue of the thread that made the timer request (called `SetWaitableTimer()`). This mechanism introduces two problems:
+
+1. Standard Windows user APCs do not interrupt the currently executing instruction stream of the thread to which they are queued. Instead, APCs in the APC queue for a thread are only executed in the event that the thread enters an _alertable wait state_ (via a call to e.g. `SleepEx()`).
+2. The APC that notifies timer expiration is always queued to the thread that created the timer.
+
+These issues make it difficult to integrate waitable timers with coroutines via IO completion ports.
