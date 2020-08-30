@@ -36,6 +36,71 @@ The general approach we'll take to hiding the latency from memory stalls associa
 
 C++20 coroutines are a perfect match for implementing ISI because they provide us with an elegant and lightweight abstraction for maintaining multiple instruction streams and their associated context. The latter property is particularly important for the application we have in mind; if the cost of switching between executing coroutines is higher than the cost of a memory stall from an L3 cache miss, any work we do to interleave instruction streams will be for naught as we will be assured to see an overall decline in performance for our troubles.
 
+As mentioned before, the entirety of this implementation is available [on Github](https://github.com/turingcompl33t/coroutines/tree/master/applications/map) so I won't go through all of the details here. However, we will look at two short code snippets that get to the heart of how we implement ISI with coroutines.
+
+The first code snippet we'll look at is the coroutine that represents a single lookup task. Accordingly, this coroutine is implemented by a member function `Map::lookup_task()`, the body of which is shown below.
+
+```c++
+auto const index = bucket_index_for_key(key);
+
+auto& bucket = buckets[index];
+if (0 == bucket.n_items)
+{
+    co_return on_not_found();
+}
+
+auto* entry = co_await prefetch_and_schedule_on(bucket.first, scheduler);
+
+for (;;)
+{
+    if (key == entry->key)
+    {
+        co_return on_found(entry->key, entry->value);
+    }
+
+    if (nullptr == entry->next)
+    {
+        // reached the end of the bucket chain
+        break;
+    }
+
+    // traverse the linked-list of entries for this bucket
+    entry = co_await prefetch_and_schedule_on(entry->next, scheduler);
+}
+
+co_return on_not_found();
+```
+
+If you compare this function with the implementation of regular (non-interleaved) lookup operations on the map (`Map::lookup()`) you'll find that the two are remarkable similar. We replace the `return` statements with `co_return`, and instead of returning `LookupKVResult` directly, we invoke one of two callback functions that are provided to the coroutine as parameters (this just simplifies the implementation of the function that manages these coroutines, which we'll see next). The only other difference are the `co_await prefetch_and_schedule_on()` expressions that take the place of raw pointer dereferences. The `prefetch_and_schedule_on()` function issues a hardware prefetch on the provided address, schedules the coroutine that invoked it for resumption on the provided `Scheduler`, and suspends execution of the coroutine. When the coroutine is subsequently resumed by the `Scheduler`, the `co_await prefetch_and_schedule_on()` expression simply resolves to the desired pointer via the definition of the `await_resume()` member of the `prefetch_awaiter` that `prefetch_and_schedule_on()` returns.
+
+The only other code we'll look at is the `Map::interleaved_multilookup()` function itself. 
+
+```c++
+using MapType    = Map<KeyT, ValueT, Hasher>;
+using ResultType = typename MapType::LookupKVResult;
+
+Throttler throttler{scheduler, n_streams};
+
+for (auto key_iter = begin_keys; key_iter != end_keys; ++key_iter)
+{
+    throttler.spawn(
+        lookup_task(
+            *key_iter,
+            scheduler,
+            [&begin_results](KeyT const& k, ValueT& v) mutable {
+                *begin_results = ResultType{k, v};
+                ++begin_results;
+            },
+            [&begin_results]() mutable { 
+                *begin_results = ResultType{};
+                ++begin_results;
+            }));
+}
+
+// run until all lookup tasks complete
+throttler.run();
+```
+
 ### Results
 
 The general approach we'll use for benchmarking the two multilookup implementations is the following:
