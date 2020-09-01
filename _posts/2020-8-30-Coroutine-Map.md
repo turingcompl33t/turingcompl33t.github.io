@@ -1,6 +1,6 @@
 ---
 layout: post
-title: "Increasing Map Multi-Lookup Throughput with Coroutines"
+title: "Accelerating Map Multi-Lookup with Coroutines"
 ---
 
 In this post we'll explore an approach to using C++20 coroutines to hide memory stall latency when performing bulk lookup operations on a map data structure that exceeds the size of our last-level cache.
@@ -11,23 +11,54 @@ All of the code associated with this post is available on [Github](https://githu
 
 My interest in this topic was sparked by Gor Nishanov's presentation at CppCon 2018: [Nano-Coroutines to the Rescue!](https://www.youtube.com/watch?v=j9tlJAqMV7U). In that presentation, Gor walks through the implementation of a binary search algorithm that utilizes coroutines to hide memory stall latency. Furthermore, in the [paper](http://www.vldb.org/pvldb/vol11/p1702-jonathan.pdf) on which Gor's presentation is based, the authors utilize a chaining hashtable implementation as another case study for the same approach to performance improvement. My implementation here is an attempt to recreate the results reported in that paper.
 
-### The Setting
+### Motivation
 
-Map (or _associative array_) interfaces are ubiquitous in many programming environments. We use maps to count the number of occurrences of unique words in a text corpus. We use maps to maintain dynamic configuration information in large systems. We use maps to implement software caching solutions. In short, maps are everywhere. 
+Suppose you are building an application that constructs and maintains a data structure that implements the "map" interface; that is, a data structure that support lookups, insertions, updates, and removals on key / value pairs of arbitrary type. Further, suppose that periodically, higher-level logic in your application requires that you perform a lookup operation on a large subset of the keys stored in your map, and is unable to make progress until the entirety of this bulk lookup operation completes. The particulars of these constraints are important because, as we'll see soon, the strategy that we'll use to increase multi-lookup throughput does not generalize to single-lookup scenarios. It is only in cases wherein we need to perform many queries against a data structure in a bulk operation that we'll see any performance benefits from this approach.
 
-However, one similarity among all the examples presented above is that we are typically only interested in single-lookup operations on the map. That is, at any one time, we only want to look up a single key in the map, either to merely test for its presence or to retrieve the associated value. 
+When your map is (relatively) small, life is good. The entirety of the data structure fits within one of the levels of your cache hierarchy, so all of the lookups that you perform as part of a multilookup operation are served from cache. Consequently, you observe high throughput, as measured by the number of keys for which a lookup completes per second, for the operation as a whole.
+
+However, once the number of keys stored in the map grows large enough, and the data structure exceeds the size of your last-level cache, performance problems emerge. The overall throughput of the multilookup operation falls off a cliff once this threshold is reached, and continues to grow worse in a superlinear fashion as its size continues to increase. What is happening?
+
+Now, at this point you may be thinking to yourself "I've been developing software for years and I've never encountered this situation" - a perfectly reasonable reaction. Prior to researching this post I never had reason to consider such a situation either, which is why next we'll quickly look at a concrete use case wherein exactly this situation has real-world performance implications.
+
+This problem is particularly salient in pointer-based data structures wherein there exist one or more levels of pointer-based indirection between the "entry" to the data structure and the item in which a lookup operation is interested. The classic chaining hashtable implementation of the map API is an example of one such data structure. 
 
 One particularly salient example of this type of usage is in the implementation of _hash join_ algorithms for database management systems. A full discussion of the mechanics of a hash join is outside the scope of this post (see e.g. any of the slides / lectures available from [CMU's database system's courses](https://www.cs.cmu.edu/~pavlo/) for a more robust explanation) but I'll cover the absolute basics here so that we have a feel for a potential use case.
 
 Briefly, in a simple two-way hash join, we construct a hashtable that is keyed by the join attribute from the first table, inserting each key into the table. Then, to perform the join, we iterate over each join attribute in the second table and probe the hashtable for this value. If the attribute is present in the table (the lookup succeeds) then the tuple that corresponds to that join attribute should be included in the output of the join.
 
-### The Problem
+You are unlikely to find a simple chaining hashtable being used for index joins in a production database management system because of their far-from-optimal performance and memory efficiency characteristics, but they serve as a perfect proof-of-concept data structure for the techniques explored in this post because they exhibit the performance issues associated with a high degree of indirection (because of the way collisions are handled) coupled with a relative simplicity of implementation.
 
-When the number of keys in the map grows large, the underlying storage utilized by the map to maintain its items may exceed the size of L3 cache, implying that some lookup 
+### The Interface
 
-This problem is particularly salient in pointer-based data structures wherein there exist one or more levels of pointer-based indirection between the "entry" to the data structure and the item in which a lookup operation is interested. The classic chaining hashtable implementation of the map API is an example of one such data structure. 
+Aside from the standard map API functions `lookup()`, `insert()`, `update()`, and `remove()`, my `Map` implementation also includes the following members for performing multilookup operations:
 
-### Approach
+```c++
+template <
+    typename BeginInputIter, 
+    typename EndInputIter, 
+    typename OutputIter>
+auto sequential_multilookup(
+    BeginInputIter begin_keys,
+    EndInputIter   end_keys,
+    OutputIter     begin_results) -> void;
+
+template <
+    typename BeginInputIter, 
+    typename EndInputIter, 
+    typename OutputIter,
+    typename Scheduler>
+auto interleaved_multilookup(
+    BeginInputIter    begin_keys,
+    EndInputIter      end_keys,
+    OutputIter        begin_results,
+    Scheduler const&  scheduler,
+    std::size_t const n_streams) -> void;
+```
+
+The first three arguments for each function specify the input and output ranges utilized by the multilookup operation. The `interleaved_multilookup()` function accepts two additional arguments, the first of which is a reference to a `Scheduler` that manages suspension and subsequent resumption of the individual coroutines it spawns, and the second that specifies the number of independent instruction streams to utilize in the multilookup. We'll revisit these two parameters is slightly more detail below.
+
+### Behind the Scenes
 
 The general approach we'll take to hiding the latency from memory stalls associated with cache misses is called _instruction stream interleaving_, or ISI. As the name implies, under ISI we maintain and multiplex multiple, independent instruction streams concurrently, interleaving them intelligently to keep the CPU busy with computation rather than stuck waiting for the memory system. The high-level approach proceeds in two steps:
 
@@ -101,7 +132,7 @@ for (auto key_iter = begin_keys; key_iter != end_keys; ++key_iter)
 throttler.run();
 ```
 
-### Results
+### Experimental Results
 
 The general approach we'll use for benchmarking the two multilookup implementations is the following:
 
