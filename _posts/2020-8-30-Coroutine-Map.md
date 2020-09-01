@@ -3,13 +3,13 @@ layout: post
 title: "Increasing Map Multi-Lookup Throughput with Coroutines"
 ---
 
-In this post we'll explore an approach to using C++20 coroutines to hide memory stall latency when performing bulk lookup operations on a map data structure that exceeds the size of L3 cache.
+In this post we'll explore an approach to using C++20 coroutines to hide memory stall latency when performing bulk lookup operations on a map data structure that exceeds the size of our last-level cache.
 
 All of the code associated with this post is available on [Github](https://github.com/turingcompl33t/coroutines/tree/master/applications/map).
 
 ### Acknowledgements
 
-My interest in this topic was sparked by Gor Nishanov's presentation at CppCon 2018: [Nano-Coroutines to the Rescue!](https://www.youtube.com/watch?v=j9tlJAqMV7U). In that presentation, Gor walks through the implementation of a binary search algorithm that utilizes coroutines to hide memory stall latency. Furthermore, in the [paper](http://www.vldb.org/pvldb/vol11/p1702-jonathan.pdf) on which Gor's presentation is based, the authors utilize a chaining hashtable implementation as another case study for the same approach to performance improvement. My implementation here is an attempt to recreate the results reported in this paper.
+My interest in this topic was sparked by Gor Nishanov's presentation at CppCon 2018: [Nano-Coroutines to the Rescue!](https://www.youtube.com/watch?v=j9tlJAqMV7U). In that presentation, Gor walks through the implementation of a binary search algorithm that utilizes coroutines to hide memory stall latency. Furthermore, in the [paper](http://www.vldb.org/pvldb/vol11/p1702-jonathan.pdf) on which Gor's presentation is based, the authors utilize a chaining hashtable implementation as another case study for the same approach to performance improvement. My implementation here is an attempt to recreate the results reported in that paper.
 
 ### The Setting
 
