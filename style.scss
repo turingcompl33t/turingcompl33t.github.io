@@ -271,6 +271,18 @@ nav {
     text-transform: uppercase;
     font-size: 15px;
   }
+
+  table {
+    width: 100%;
+  }
+
+  th {
+    border-bottom: 1px solid #000;
+  }
+
+  td {
+    border-bottom: 1px solid #ddd;
+  }
 }
 
 .wrapper-footer {
