@@ -17,7 +17,7 @@ Before proceeding, we'll verify our Python installation to make sure that everyt
 
 On Windows, you should see something like the following:
 
-```bash
+```
 > python --version
 Python 3.8.3
 > where python
@@ -33,7 +33,7 @@ Once complete, make sure to apply the changes. You will need to restart your com
 
 On OSX or Ubuntu Linux, you can verify your Python installation in a similar manner:
 
-```bash
+```
 $ python --version
 Python 3.8.3
 $ which python
@@ -50,7 +50,7 @@ We can install `pipenv` with the Python package manager `pip`.
 
 On Windows, run the following command to install `pipenv` and subsequently verify that the install succeeded:
 
-```bash
+```
 > pip install --user -U pipenv
 > pipenv --version
 pipenv, version 2020.8.13
@@ -60,7 +60,7 @@ The `--user` flag simply specifies that we want to install `pipenv` for our user
 
 On OSX and Ubuntu Linux, we want to avoid updating our `PATH`, so we'll opt for a global installation of `pipenv`. This will ensure that the `pipenv` command is accessible from our shell.
 
-```bash
+```
 $ sudo -H pip install -U pipenv
 $ pipenv --version
 pipenv, version 2020.8.13
@@ -68,21 +68,21 @@ pipenv, version 2020.8.13
 
 Now the baseline requirements are out of the way, so we'll move onto setting up the specific requirements for our Python data science development environment. First we'll create a directory that will serve as the root project directory for your data science projects. For the purposes of this post, I'll refer to this directory with the name `cds` for "computational data science."
 
-```bash
+```
 > cd path/to/dev/directory
 > mkdir cds && cd cds
 ```
 
 Now, within this directory, we can create a new virtual environment for all our data science projects with `pipenv`, installing JupyterLab and its associated components within this virtual environment. JupyterLab includes a large number of dependencies so this installation will likely take a few minutes.
 
-```bash
+```
 dev/cds> pipenv install jupyterlab
 ...
 ```
 
 After the install completes, we need to enter the virtual environment context by _activating_ the virtual environment with `pipenv`:
 
-```bash
+```
 dev/cds> pipenv shell
 Launching subshell in virtual environment…
 ...
@@ -93,7 +93,7 @@ A virtual environment maintains unique copies of the Python interpreter and the 
 
 On Windows you should see output similar to the following:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds> where python
 C:\path\to\user\profile\.virtualenvs\semirandom-virtualenv-id\Scripts\python.exe
 C:\path\to\user\profile\AppData\Local\Programs\Python\Python38\python.exe
@@ -105,7 +105,7 @@ Notice that the output from `python --version` on a Windows system will likely d
 
 On OSX or Ubuntu Linux the output should instead resemble:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds$ which python
 /path/to/user/profile/.local/share/virtualenvs/semirandom-virtualenv-id/bin/python
 (semirandom-virtualenv-id) dev/cds$ pip --version
@@ -118,7 +118,7 @@ The final setup step is registration of the virtual environment Python interpret
 
 To register the virtual environment as a new kernel, run the following command:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds> python -m ipykernel install --name=cds
 Installed kernelspec cds in some/os/specific/path/jupyter/kernels/cds
 ```
@@ -131,13 +131,13 @@ Now that setup is complete, let's run through a quick test to ensure that everyt
 
 For demonstration purposes, we'll use the `numpy` package. First, with the virtual environment activated (see above), install the `numpy` package with:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds> pip install numpy
 ```
 
 Equivalently, you can run:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds> pipenv install numpy
 ```
 
@@ -145,7 +145,7 @@ Both commands install the `numpy` within our virtual environment only and do not
 
 Next, launch JupyterLab in the browser with:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds> jupyter lab
 ```
 
@@ -159,7 +159,7 @@ In the new notebook, you should be able to import the `numpy` package and make u
 
 Finally, when you are done working and want to exit the virtual environment context within the shell, just run:
 
-```bash
+```
 (semirandom-virtualenv-id) dev/cds> exit
 
 Aborted!
