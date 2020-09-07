@@ -1,4 +1,7 @@
-## Data Science Development Setup with Python Virtual Environments and JupyterLab
+---
+layout: post
+title: "Data Science Development Setup with Python Virtual Environments and JupyterLab"
+---
 
 This post is a quick walkthough of a development environment setup for data science work with [JupyterLab](https://jupyter.org/install.html).
 
