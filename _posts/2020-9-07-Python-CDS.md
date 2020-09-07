@@ -7,7 +7,7 @@ This post walks through the configuration of a basic local development environme
 
 ### Setup
 
-The first step in the setup for this environment is installing Python. There are plenty of resources available describing how to install Python on your system, so we won't go into the details here; instead, I'll just point out a few good places to start:
+The first step in the setup for this environment is installing Python. There are plenty of resources available describing how to install Python, so we won't go into the details here; instead, I'll just point out a few good places to start:
 
 - Installing Python on [Windows](https://www.python.org/downloads/windows/)
 - Installing Python on [OSX](https://docs.python-guide.org/starting/install3/osx/)
@@ -31,7 +31,7 @@ If you're unable to invoke `python` from a command prompt (`cmd.exe`) you may ne
 
 Once complete, make sure to apply the changes. You will need to restart your command prompt in order for the changes to take effect.
 
-On OSX or Ubuntu Linux, you can verify your Python installation in a similar manner:
+On OSX or Ubuntu Linux, we can verify our Python installation in a similar manner:
 
 ```
 $ python --version
@@ -40,7 +40,7 @@ $ which python
 /usr/bin/python
 ```
 
-On both of these systems, the package manager (`homebrew` on OSX, `apt` on Ubuntu) should take care of all of the path environment variable management for you by installing Python in a location that is already accessible from your shell.
+On both of these systems, the package manager (`homebrew` on OSX, `apt` on Ubuntu) should take care of all of the path environment variable management for you by installing Python in a location that is already accessible from our shell.
 
 Note that your Python version may differ from the output above. This is fine, so long as the major version is Python 3 and not Python 2.
 
@@ -66,7 +66,7 @@ $ pipenv --version
 pipenv, version 2020.8.13
 ```
 
-Now the baseline requirements are out of the way, so we'll move onto setting up the specific requirements for our Python data science development environment. First we'll create a directory that will serve as the root project directory for your data science projects. For the purposes of this post, I'll refer to this directory with the name `cds` for "computational data science."
+Now the baseline requirements are out of the way, so we'll move onto setting up the specific requirements for our Python data science development environment. First we'll create a directory that will serve as the root project directory for our data science projects. For the purposes of this post, I'll refer to this directory with the name `cds` for "computational data science."
 
 ```
 > cd path/to/dev/directory
