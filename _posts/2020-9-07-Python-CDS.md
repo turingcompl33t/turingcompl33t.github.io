@@ -151,11 +151,11 @@ Next, launch JupyterLab in the browser with:
 
 From the JupyterLab interface in the browser, create a new notebook by selecting our custom kernel from the menu of available kernels:
 
-![Select the Custom Kernel]( http://raw.githubusercontent.com/turingcompl33t/turingcompl33t.github.io/master/images/2020-9-07-Python-CDS/launcher.PNG)
+![Select the Custom Kernel](http://raw.githubusercontent.com/turingcompl33t/turingcompl33t.github.io/master/images/2020-9-07-Python-CDS/launcher.PNG)
 
 In the new notebook, you should be able to import the `numpy` package and make use of it in subsequent cells:
 
-![Packages Work Properly]( http://raw.githubusercontent.com/turingcompl33t/turingcompl33t.github.io/master/images/2020-9-07-Python-CDS/verify.PNG)
+![Packages Work Properly](http://raw.githubusercontent.com/turingcompl33t/turingcompl33t.github.io/master/images/2020-9-07-Python-CDS/verify.PNG)
 
 Finally, when you are done working and want to exit the virtual environment context within the shell, just run:
 
