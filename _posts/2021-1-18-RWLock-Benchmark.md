@@ -22,7 +22,7 @@ A _Reader-Writer Lock_ is a synchronization primitive that provides mutual exclu
 
 The API provided by various implementations may differ slightly from this archetype, but the methods above present the general idea.
 
-The benefit of reader-writer locks over vanilla locks is that they provide the ability to increase the level of concurrency supported by an application. In the event that some operations on the data protected by the lock do not include mutation, many threads may safely perform these operations concurrently.
+The benefit of reader-writer locks over vanilla locks is that they provide the ability to increase the level of concurrency supported by an application. In the event that operations on the data protected by the lock do not involve mutation, they may be safely performed concurrently by multiple threads.
 
 ### Reader-Writer Lock Implementations
 
@@ -30,11 +30,11 @@ We'll look at two popular reader-writer lock implementations in this benchmark:
 
 **`tbb::reader_writer_lock`**
 
-The reader-writer lock implementation from Intel's TBB library serves threads on a first-come fist-served basis, with the added caveat that writers are given preference over readers - this is often an important modification to ensure that writers are not starved in read-heavy workloads. All waiting is done in userspace via busy-loops. This design is a double-edged sword: under low contention, this saves us potentially-expensive calls into the OS kernel, but under high contention this might lead to significant performance degradation as multiple cores are saturated with threads spinning on the lock.
+The reader-writer lock implementation from Intel's TBB library serves threads on a first-come first-served basis, with the added caveat that writers are given preference over readers - this is often an important modification to ensure that writers are not starved in read-heavy workloads. All waiting is done in userspace via busy-loops. This design is a double-edged sword: under low contention, this saves us potentially-expensive calls into the OS kernel, but under high contention this might lead to significant performance degradation as multiple cores are saturated with threads spinning on the lock.
 
 **`std::shared_mutex`**
 
-The standard library's reader-writer implementation necessarily differs among compilers and platforms. For this benchmark I utilize a system with the following relevant specifications:
+The standard library's reader-writer lock implementation necessarily differs among compilers and platforms. For this benchmark I utilize a system with the following relevant specifications:
 
   - Compiler: GCC 10.2
   - Standard Library: `libstdc++`
@@ -48,7 +48,7 @@ The above descriptions should make it evident that the two reader-writer lock im
 
 All of the code used to benchmark the performance of these two reader-writer lock implementations is available [on Github](https://github.com/turingcompl33t/cpp-playground/tree/master/locks/rw-bench).
 
-To evaluate the performance of these lock implementations, we focus on two important runtime properties: throughput and latency. In this context, _throughput_ refers to the number of lock requests we can process in a given amount of time. In contrast, _latency_ measures the time interval between when a thread requests the lock (in either shared or exclusive mode) and when the request is granted. Both of these performance characteristics are important to the overall performance of a program, but the degree to which this is true depends heavily on the specifics of the application.
+To evaluate the performance of these lock implementations, we focus on two important runtime properties: throughput and latency. In this context, _throughput_ refers to the number of lock requests we can process in a given amount of time. In contrast, _latency_ measures the time interval between when a thread requests the lock (in either shared or exclusive mode) and when the request is granted. Both of these performance characteristics are important to the overall performance of a program, but the degree to which this is true depends heavily on the specific requirements of the application.
 
 ### Benchmark: Results
 
@@ -57,7 +57,7 @@ To evaluate the performance of these lock implementations, we focus on two impor
 For throughput evaluation, we benchmark both lock implementations under two workload characteristics:
 
 - _read-heavy_ represents a theoretical workload in which 10% of lock requests are for exclusive access and the remaining 90% of requests are for shared access.
-- _equal-load_ represents a theoretical workload in which the number of exclusive and shared locked requests are equivalent.
+- _equal-load_ represents a theoretical workload in which the number of exclusive and shared lock requests are equivalent.
 
 For each of these workload characteristics, we vary the total number of worker threads running the benchmark (contending on the lock) and measure the total time required for all workers to complete the prescribed number of operations with the lock held. The results are summarized by the plot below.
 
