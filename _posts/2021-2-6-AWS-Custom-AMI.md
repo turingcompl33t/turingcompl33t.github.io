@@ -81,6 +81,7 @@ The first and most straightforward step in creating the custom AMI from a virtua
 After the image is uploaded to S3, the next step is to create a new service role, `vmimport`, that will be permitted to perform the VM import and export operations on our behalf. Creating this role requires a couple distinct steps, the first of which is create the role itself with the `create-role` command. We define the role via a JSON file `trust-policy.json` as follows:
 
 ```
+// trust-policy.json
 {
    "Version": "2012-10-17",
    "Statement": [
@@ -140,6 +141,7 @@ Upon invoking this command, we should receive some JSON in response:
 Now we need to create a policy and attach it to the role that we have just created. We define the policy in the file `role-policy.json`:
 
 ```
+// role-policy.json
 {
   "Version":"2012-10-17",
   "Statement":[
@@ -196,6 +198,7 @@ On successful invocation, this command produces no output.
 Finally, we have completed all of the steps necessary to actually import the VM image. We accomplish this by first creating a `containers.json` file that describes the image we wish to import:
 
 ```
+// containers.json
 [
   {
     "Description": "LLVM Hacking VM",
@@ -246,7 +249,7 @@ where `import-ami-XXXX` is replaced with the string from the `ImportTaskId` from
 
 Once the `describe-import-image-tasks` command reports that the import is complete, we should be able to locate our custom AMI in one of the dropdowns when provisioning a new EC2 instance (assuming you do so via the web console).
 
-Congratulations! We now have a workflow for provisioning compute instances from arbitrary VM images on AWS EC2. The natural next-step is to attempt automating this process via one of the many programmatic APIs that AWS exposes (e.g. Python), but I'll save this topic for a (potential) future post.
+Success! We now have a workflow for provisioning compute instances from arbitrary VM images on AWS EC2. The natural next-step is to attempt automating this process via one of the many programmatic APIs that AWS exposes (e.g. Python), but I'll save this topic for a (potential) future post.
 
 ### References / Further Reading
 
