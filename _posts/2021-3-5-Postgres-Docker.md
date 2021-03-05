@@ -3,7 +3,7 @@ layout: post
 title: "Running PostgreSQL Locally with Docker"
 ---
 
-This post is a super quick-and-dirty look at how to run a local PostgreSQL instance with Docker. For some reason the documentation provided on the page [the image](https://hub.docker.com/_/postgres?tab=description&page=1&ordering=last_updated) never works for me, so this is primarily to remind myself how I finally got the process to work.
+This post is a super quick-and-dirty look at how to run a local PostgreSQL instance with Docker. For some reason the documentation provided on the page for [the image](https://hub.docker.com/_/postgres?tab=description&page=1&ordering=last_updated) never works for me, so this is primarily to remind myself how I finally got the process to work.
 
 ### Walkthrough
 
