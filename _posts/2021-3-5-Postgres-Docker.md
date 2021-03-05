@@ -16,7 +16,7 @@ $ docker pull postgres:alpine
 Start the container:
 
 ```bash
-docker run --rm --name postgres -e POSTGRES_PASSWORD=password -d postgres:alpine
+$ docker run --rm --name postgres -e POSTGRES_PASSWORD=password -d postgres:alpine
 ```
 
 When the container starts, it automatically starts the DBMS instance, and the default user and database are created. 
