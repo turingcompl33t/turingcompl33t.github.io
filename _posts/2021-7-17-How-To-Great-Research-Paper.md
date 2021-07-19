@@ -106,28 +106,21 @@ The former list contains horrible, strawman examples that I never actually inclu
 
 ### 5. Leave Related Work for Later
 
-Problem 1: You have not gotten to your idea yet, so your compressed description of alternative approaches is incomprehensible.
-Problem 2: Describing alternative approaches gets between the reader and your idea.
+In a typical research paper, what section follows the introduction? In about 50% of the papers I have read, the answer is the section describing background and related work. Simon argues that this is a mistake, citing the following two problems as justification:
+- Problem 1: At this point in the paper, you have not gotten to your idea yet, so your compressed description of alternative approaches is incomprehensible.
+- Problem 2: Describing alternative approaches gets between the reader and your idea.
 
-We are taking the reader to our idea via the most direct path.
+Based on my personal experience, I agree wholeheartedly with these observations. Indeed, most of the time that I encounter a related works section that comes before the actual contributions of the paper, I skim through it or skip over it entirely, and only on rare occasions do I circle back around to read it once I am prepared to do so. By saving the related work section until the end, we give ourselves the opportunity to **take the reader to our idea via the most direct path**. This maximizes the probability that they will have our idea in mind when they walk away from our paper.
 
-Credit is like love, not money. It is not a zero-sum game. You do not need to make others' ideas look bad to make yours look good or worthy of consideration.
-
-Acknowledge weaknesses in your approach. It is very rare in computer science to come up with a new idea that dominates all existing approaches along all dimensions.
+Also on the topic of related work, Simon reminds us that **credit is like love, not money**. Technical research is not a zero-sum game, so we don't need to make others' ideas look bad to make our own look good or worthy of consideration. 
 
 ### 6. Put Your Readers First
 
-Don't recapitulate your entire journey for your readers. You were wandering blind while working on initial iterations of your idea, and while it may be tempting to walk readers through this as well, it will put them to sleep and waste their time.
+We have covered the content in the introduction and related work, and finally we come to the heart of the paper - the description of our idea. Simon's advice here is simple yet powerful: **don't recapitulate your entire journey for your readers**. 
 
-I am definitely prone to making this mistake. I am tempted to take my readers by the hand and lead them through the twists and turns of the research maze so that they might appreciate how clever I am to have made it out the other side. But this is not the point.
+When we begin our research, the path forward may be unclear, and we may encounter many obstacles along the way. If you are anything like me, you might be tempted to subject your readers to a similar experience. We _could_ take our readers by the hand and lead them through the twists and turns of the research maze so that they might appreciate how clever we are to have emerged on the other side. But this is orthogonal to our true purpose, which is to communicate our idea. The journey may be interesting, but we should only include those aspects that are directly relevant to the end result. Save the gory details for a blog post.
 
-This highlights an even more fundamental principle that might not occur to novice researchers (and may be forgotten by those with more experience): scientific research is not about _you_. I want to see my name on the authors line as much as the next guy.
-
-Conveying the intuition of the payload of your idea is primary, not a secondary concern.
-
-Introduce the concepts with examples, and only after that get to the general case with rigorous formulation (if applicable).
-
-Explain it as if you were speaking to someone at a whiteboard.
+This highlights an even more fundamental principle that might not occur to novice researchers (and may be forgotten by those with more experience): **scientific research is not about you**. It is about innovating, advancing the state-of-the-art, and moving this entire human experiment forward (if only by an inch). Don't get me wrong, I want to see my name on the authors line as much as the next guy (especially in that hallowed first position), and this can be a powerful motivator when working through some of the more difficult parts of the research process. But we must not allow this motivation to bleed through into the content of the paper itself. In doing so, we keep the focus where it belongs.
 
 ### 7. Listen to Your Readers
 
@@ -147,4 +140,4 @@ Treat every review like gold dust. Be (truly) grateful for criticism. You can us
 
 ### References
 
-- [How to Write A Great Research Paper](https://www.youtube.com/watch?v=VK51E3gHENc) talk by Simon Peyton Jones.
+- [How to Write A Great Research Paper](https://www.youtube.com/watch?v=VK51E3gHENc) by Simon Peyton Jones.
