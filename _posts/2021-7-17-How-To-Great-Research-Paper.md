@@ -41,7 +41,7 @@ The paper needs one, clear, sharp idea. If you have many ideas, write many paper
 
 ### 3. Tell A Story
 
-Imagine explaining your idea at a whiteboard:
+Now that we know _what_ our idea is, we need to figure out _how_ best to communicate it to the world. Simon recommends imagining the process of explaining your idea at a whiteboard, and comes up with the following narrative structure:
 - Here is a problem
 - It is an interesting problem
 - It is an unsolved problem
@@ -49,17 +49,46 @@ Imagine explaining your idea at a whiteboard:
 - My idea works
 - Here is how my idea compares to others' approaches
 
+Anyone who has done any paper-reading should recognize this as the general structure of most research work. The critical insight that I took away from this section of Simon's presentation is that **there is a reason papers are structured this way.** That is, the typical or expected sections of a research paper are not just empty boxes with a label affixed that we then go and fill with content. Instead, **these are the sections that naturally emerge when we tell a story** which is ultimately what we are attempting to do.
+
+Despite being very new to the process of writing research papers, I already find that I frequently get bogged-down in filling in the content that is expected of me in each section of the paper. This is the wrong way to think about the problem; indeed, it might even be the _opposite_ of the right way! The content in each section of the paper should be a consequence of the story we want to tell - it is not the goal in and of itself.
+
 ### 4. Nail Your Contributions to the Mast
 
+We have identified the narrative that drives our paper as well as the high-level structure that this narrative will take. Now we turn our attention to the content of the paper itself, beginning with the introduction.
+
+Simon recommends a minimal introduction that consists of just the following two elements:
 - State the problem
 - Identify your contributions
-- That's it!
 
-Simon's advice: use a specific example.
+There are a number of good reasons for keeping the introduction concise, the most important being that the time and attention of our readers is limited. The introduction may be the only section of our paper that someone reads, and at the very least it is our chance to capture readers' attention.
 
-Molehills not mountains. Don't get bogged down in too much framing or context for the problem (the whole moutain). Instead, slice off your molehill and attack it directly.
+Simon's advice on the best way to do this is to lead with a specific example. It is natural for us to want to provide sufficient context for the problem prior to proposing our solution, but more often than not this context hurts our introduction more than it helps it. The alternative is to immediately identify our little corner of the problem space and attack it directly. To use Simon's analogy, we should not waste our precious space in the introduction describing the entire mountain, instead we should quickly focus in on the molehill that our idea addresses.
 
-Explicitly state your contributions. Use bullets. Your contributions should be _refutable_ - they should be things that could be false, that you fail to deliver on! 
+To make this idea concrete, let's look at a specific example. The passage below is taken from the introductory section of a preliminary report on my research:
+
+> Structured query language (SQL) is a cornerstone of data storage and retrieval. The language, despite being developed nearly fifty years ago, represents one of the last remaining commonalities among most modern database management systems (DBMS). There are a number of reasons for SQL's continued popularity, the most salient being its high-level declarative syntax that makes it both easy to learn and amenable to optimization. 
+> 
+> Despite its success, however, SQL is not without its drawbacks...
+
+Reading this now is somewhat embarassing, but also amusing; in this passage, I write _exactly_ the style of introduction that Simon tells us not to write! While it might sound nice (or at least it did to me when I wrote it) this introduction does no useful work. Readers new to the field will likely be confused (e.g. why does SQL's declarative syntax make it amenable to optimization?) while readers that are familiar with database systems don't need another lecture on the virtues of SQL.
+
+Revisiting this introduction and applying some of Simon's recommendations, I might now write something like:
+
+> Consider the SQL queries below:
+> ```SQL
+> -- Table test
+> -- -----------
+> -- | x (INT) |
+> -- -----------
+>
+> SELECT x, 1 FROM test;
+>
+> SELECT x, return_one() FROM test;
+> ```
+> While these queries produce equivalent results, the latter query may take up to 1000x longer to execute than the former in some database systems. This surprising disparity in runtime is a result of the use of the user-defined function (UDF) `return_one()` in the latter query. We present an new approach to efficient execution of UDFs in relational database systems that reduces the negative performance impact they typically impose.
+
+Your contributions should be _refutable_ - they should be things that could be false, that you fail to deliver on! 
 
 Skip the section with "the rest of this paper is structured as follows..." Everybody skips this! Instead, use forward references to the rest of your paper throughout the introduction.
 
@@ -97,6 +126,10 @@ Use your guinea pigs sparingly. Once someone has read your paper once, they will
 Explain carefully to your guinea pigs what you want from their review. You don't care about spelling and grammar mistakes. You do care about where they lose understanding in the paper. Make this desire explicit!
 
 Treat every review like gold dust. Be (truly) grateful for criticism. You can use this to make your work better. Also respect the fact that the reviewer, regardless of the content of their review, have given you the gift of their time.
+
+### Conclusion
+
+
 
 ### References
 
