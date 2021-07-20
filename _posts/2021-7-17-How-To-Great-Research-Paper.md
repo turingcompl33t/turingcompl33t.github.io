@@ -29,13 +29,17 @@ This is one of the suggestions from Simon's presentation that I regret not consi
 
 ### 2. Know What Your Idea Is
 
-We have established that we want to start writing before beginning our research, but to start writing, we need to have an idea. Simon's second suggestion addresses what such an idea should look like.
+So we've established that starting to write early in the research process is of paramount importance, but we can't just start spewing words into a Latex document and hope that a groundbreaking result emerges. We need an idea to organize and direct our efforts. Accordingly, Simon's second suggestion is aimed at describing how such an idea should look.
 
-A paper is not a way to get "research point" but rather is a mechanism for conveying an idea. 
+Simon presents a number of concrete suggestions here, but they all flow naturally from the observation that **an effective idea is like a mind-virus** - it invades and inhabits the minds of those who read it, whether they are conscious of it or not. This analogy might sound a bit dark, malicious even, but consider some of the properties that this implies:
+- The idea must be simple (this is NOT to say that it is "easy")
+- The idea must be amenable to concise expression
+- The idea must admit of an intuitive understanding
+- The idea must solve a problem, and do so elegantly
 
-An effective paper is like a mind-virus - it takes over the mental space of the people who read it.
+Think of the last compelling technical idea you heard. Did it have any of these properties? Would you be able to communicate it to someone else, with high fidelity?
 
-Simon cites Mozart as an example of an author whose ideas have proven successful and durable - we still read his work to this day in concert halls all over the world! 
+Simon cites Mozart as an example of an author of ideas that fit these criteria; we still read his work to this day in concert halls all over the world. For me, the example that comes to mind is the the approach to writing a query compiler through generative programming introduced in [this paper](https://arxiv.org/pdf/1612.05566.pdf) (and improved upon [here](https://www.cs.purdue.edu/homes/rompf/papers/tahboub-sigmod18.pdf)). It might not have the same widespread appeal as Mozart, but its concise, distinct, and its elegance announces itself in my brain at least once a day.
 
 Simon also touches on dealing with doubts regarding the significance of our idea. **even seemingly-inconsequential ideas are worth sharing**. After all, what are the tradeoffs here? If you are correct and your idea is unimportant, few people will read the paper, so the embarrassment blast radius will be small. However, if you are wrong, then the entire community benefits from your having taken this chance. Simon expresses this idea beautifully with the following quote:
 
@@ -141,3 +145,5 @@ Treat every review like gold dust. Be (truly) grateful for criticism. You can us
 ### References
 
 - [How to Write A Great Research Paper](https://www.youtube.com/watch?v=VK51E3gHENc) by Simon Peyton Jones.
+- [Building Efficient Query Engines in a High-Level Language](https://arxiv.org/pdf/1612.05566.pdf) by Amir Shaikhha, Yannis Klonatos, and Christoph Koch.
+- [How to Architect a Query Compiler, Revisited](https://www.cs.purdue.edu/homes/rompf/papers/tahboub-sigmod18.pdf) by Ruby Y. Tahboub, Gregory M. Essertel, and Tiark Rompf.
