@@ -7,7 +7,9 @@ I recently watched the presentation [How to Write a Great Research Paper](https:
 
 In addition to summarizing the presentation, I also provide some commentary of my own. I hope that this might add perspective - that of a truly-novice researcher - that others might find informative or at the very least amusing. For context, I have never written a proper research paper, let alone a great one. I am, however, in the process of conducting research (see [here](https://noise.page/) and [here](https://github.com/turingcompl33t/udj-jit) for specifics) in partial fulfillment of the requirements of my current academic program at Carnegie Mellon University. While I have been working on various [implementation aspects](https://github.com/cmu-db/noisepage/pull/1510) of this research for the better part of an academic term, I only recently began focusing more of my attention on reading the corpus of related work and writing drafts of my own. For this reason, I thought it prudent to begin thinking about how to communicate my research effectively.
 
-With that motivation and context out of the way, let's jump into Simon Peyton Jones' seven suggestions for writing a great research paper.
+Note that both above and in the remainder of this post I refer to Prof. Peyton Jones simply as "Simon." This is not to suggest that we are on a familiar, first-name basis, nor is it out of a lack of respect for his credentials and the titles they imply. In the first draft of this post I used his more decorous identifier, but I found in revisions that substituting this with his first name makes the post more pleasant to read. If you are reading this, Professor, forgive me!
+
+With that motivation and context out of the way, let's jump into Simon's seven suggestions for writing a great research paper.
 
 ### 1. Start Writing
 
