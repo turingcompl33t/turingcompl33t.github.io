@@ -130,17 +130,19 @@ This highlights an even more fundamental principle that might not occur to novic
 
 ### 7. Listen to Your Readers
 
-In his final recommendation, Simon addresses getting feedback on our work
+In his final recommendation, Simon addresses what is perhaps the most difficult part of the writing process: requesting and responding to feedback. 
 
-Use your guinea pigs sparingly. Once someone has read your paper once, they will never read it the same way again if you ask them read a revision (likely to put as much effort in).
+The most important consideration to bear in mind during this process is to **use reviewers deliberately**. There are (at least) two actions we can take to ensure that we accomplish this:
+- Enlist the help of reviewers sparingly. Once someone has read our paper once, they will never read it the same way again. This might lead them to skip over updated content or infer cohesion where it doesn't actually exist. We must be judicious in deciding _when_ in the writing and revision process we should solicit reviews.
+- Explain carefully to your readers what it is you want from their review. For instance, while spelling and grammar are important to get right, these are jobs for a word processor. From our human reviewers we typically want higher-level feedback, such as the precise points in the paper where their understanding falters. If we make the desire for reviews of this nature explicit, we can address these issues through subsequent conversations with our readers. Eliciting this type of feedback from a computer remains difficult (for now).
 
-Explain carefully to your guinea pigs what you want from their review. You don't care about spelling and grammar mistakes. You do care about where they lose understanding in the paper. Make this desire explicit!
+Finally, Simon encourages us to **treat every review like gold dust**. We must be truly grateful for the feedback we receive, regardless of its tenor. Whether they loved our work or hated it, our reviewer has given us the gift of their time - the one truly non-renewable resource humans possess. Furthermore, even if the reviewers words are scathing, there is still likely something in them that we can use to make our work better.
 
-Treat every review like gold dust. Be (truly) grateful for criticism. You can use this to make your work better. Also respect the fact that the reviewer, regardless of the content of their review, have given you the gift of their time.
+I struggle mightily with this final suggestion. While I understand _intellectually_ that a less-than-positive review is (at least typically) not a personal attack, I can't help feeling embarrassed and angered when I receive such feedback. Perhaps this is a reflex that will relax with more iterations, time will tell.
 
 ### Conclusion
 
-
+There you have it, seven actionable recommendations for writing better research papers. I hope you learned as much reading this post as I did while writing it!
 
 ### References
 
