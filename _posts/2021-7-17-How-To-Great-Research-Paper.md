@@ -29,15 +29,17 @@ This is one of the suggestions from Simon's presentation that I regret not consi
 
 ### 2. Know What Your Idea Is
 
-A paper is not a way to get "research point" but rather is a mechanism for conveying an idea. An effective paper is like a mind-virus - it takes over the mental space of the people who read it.
+We have established that we want to start writing before beginning our research, but to start writing, we need to have an idea. Simon's second suggestion addresses what such an idea should look like.
 
-Papers are far more durable than programs. They convey ideas. Think Mozart - we still use his ideas in concert halls today!
+A paper is not a way to get "research point" but rather is a mechanism for conveying an idea. 
 
-Fallacy: thinking that your idea is insigificant or not worth sharing. Even if your idea is "weedy" and insigificant, write it anyway. Not much is loss if this turns out to be true, and if you are wrong, you have an important idea on your hands!
+An effective paper is like a mind-virus - it takes over the mental space of the people who read it.
 
-"People don't have good ideas, rather we discover that they are good ideas after the fact."
+Simon cites Mozart as an example of an author whose ideas have proven successful and durable - we still read his work to this day in concert halls all over the world! 
 
-The paper needs one, clear, sharp idea. If you have many ideas, write many papers.
+Simon also touches on dealing with doubts regarding the significance of our idea. **even seemingly-inconsequential ideas are worth sharing**. After all, what are the tradeoffs here? If you are correct and your idea is unimportant, few people will read the paper, so the embarrassment blast radius will be small. However, if you are wrong, then the entire community benefits from your having taken this chance. Simon expresses this idea beautifully with the following quote:
+
+> "People don't have good ideas, rather we discover that they are good ideas after the fact."
 
 ### 3. Tell A Story
 
@@ -124,9 +126,7 @@ This highlights an even more fundamental principle that might not occur to novic
 
 ### 7. Listen to Your Readers
 
-Get your paper read by as many people as possible - guinea pigs.
-
-Experts are an important audience. But non-experts are an important audience too.
+In his final recommendation, Simon addresses getting feedback on our work
 
 Use your guinea pigs sparingly. Once someone has read your paper once, they will never read it the same way again if you ask them read a revision (likely to put as much effort in).
 
