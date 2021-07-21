@@ -3,9 +3,15 @@ layout: post
 title: "How to Write a Great Research Paper"
 ---
 
-I recently watched the presentation [How to Write a Great Research Paper](https://www.youtube.com/watch?v=VK51E3gHENc) by Simon Peyton Jones. I am already a huge fan of Simon's, both his work and his speaking appearances, and this presentation still managed to exceed my expectations, so much so that I feel the need to write this recapitulation and response. While I endeavor to cover some of Simon's main points in this post, it is impossible to convey the infectious passion and charisma with which he delivers them. If you have not done so already, I implore you to watch [the original](https://www.youtube.com/watch?v=VK51E3gHENc) for yourself.
+I recently watched the presentation [How to Write a Great Research Paper](https://www.youtube.com/watch?v=VK51E3gHENc) by Simon Peyton Jones. In this post, I summarize some of my primary takeaways from this presentation and augment this with some examples from my own research experience.
 
-In addition to summarizing the presentation, I also provide some commentary of my own. I hope that this might add perspective - that of a truly-novice researcher - that others might find informative or at the very least amusing. For context, I have never written a proper research paper, let alone a great one. I am, however, in the process of conducting research (see [here](https://noise.page/) and [here](https://github.com/turingcompl33t/udj-jit) for specifics) in partial fulfillment of the requirements of my current academic program at Carnegie Mellon University. While I have been working on various [implementation aspects](https://github.com/cmu-db/noisepage/pull/1510) of this research for the better part of an academic term, I only recently began focusing more of my attention on reading the corpus of related work and writing drafts of my own. For this reason, I thought it prudent to begin thinking about how to communicate my research effectively.
+For those unfamiliar with Simon Peyton Jones, he is best known as one of the minds behind [Haskell](https://www.haskell.org/), a purely-functional programming language that lends itself to [concise, beautiful implementations](https://wiki.haskell.org/Introduction#Quicksort_in_Haskell). Aside from his many contributions to the Glasgow Haskell Compiler, he is also a [prolific researcher](https://scholar.google.fr/citations?user=QsX7G-cAAAAJ&hl=en). so when he speaks on the subject of effective research, we would do best to listen.
+
+While I endeavor to cover some of Simon's main points in this post, it is impossible to convey the infectious passion and charisma with which he delivers them. If you have not done so already, I implore you to watch [the original](https://www.youtube.com/watch?v=VK51E3gHENc) for yourself.
+
+In addition to summarizing the presentation, I also provide some commentary of my own. I hope that this might add perspective - that of a truly-novice researcher - that others might find informative or at the very least amusing. 
+
+For context, I have never written a proper research paper, let alone a great one. I am, however, in the process of conducting research (see [here](https://noise.page/) and [here](https://github.com/turingcompl33t/udj-jit) for specifics) in partial fulfillment of the requirements of my current academic program at Carnegie Mellon University. While I have been working on various [implementation aspects](https://github.com/cmu-db/noisepage/pull/1510) of this research for the better part of an academic term, I only recently began focusing more of my attention on reading the corpus of related work and writing drafts of my own. For this reason, I thought it prudent to begin thinking about how to communicate my research effectively.
 
 Note that both above and in the remainder of this post I refer to Professor Peyton Jones simply as "Simon." This is not to suggest that we are on a familiar, first-name basis, nor is it out of a lack of respect for his credentials and the titles they imply. In the first draft of this post I used his more decorous identifier, but I found in revisions that substituting this with his first name makes the post more pleasant to read. If you are reading this, Professor, forgive me!
 
@@ -27,7 +33,11 @@ Instead of waiting until after the research is complete to begin writing the pap
 - **It forces us to clarify our idea.** When an idea exists only in your head, it is much easier to avoid consideration of its complexities or hide an imprecise understanding. Articulating the idea in writing exposes these weaknesses.
 - **It helps direct the research we will conduct.** When we only begin to write the paper after the research is complete, we constrain ourselves to writing the paper that is enabled by the research. If we begin the research process with the paper, we can instead write _the paper that could be_ - the best version of the paper that addresses our idea - and conduct the research necessary to realize it.
 
-This is one of the suggestions from Simon's presentation that I regret not considering sooner. As mentioned above, I have already completed some of the core implementation aspects of my research, and am only now beginning to think about writing and how I want the paper to look. While the two points above are certainly relevant to my situation as well, I feel another detrimental aspect of the "traditional approach" arises in the context of related works. In beginning my research, I read the papers that I thought directly relevant and stopped there. I have since read a significantly-larger subset of the relevant papers in my field, and I find my conception of how my research fits into this broader picture changing as a result. Ultimately I don't think this will kill the paper, but it certainly introduces additional work - work that may have been elided had I heeded Simon's first suggestion. 
+This is one of the suggestions from Simon's presentation that I regret not considering sooner. As mentioned above, I have already completed some of the core implementation aspects of my research, and am only now beginning to think about writing and how I want the paper to look. 
+
+While the two points above are certainly relevant to my situation as well, I feel another detrimental aspect of the "traditional approach" arises in the context of related works. In beginning my research, I read the papers that I thought directly relevant and stopped there. I have since read a significantly-larger subset of the relevant papers in my field, and I find my conception of how my research fits into this broader picture changing as a result. 
+
+Ultimately I don't think this will kill the paper, but it certainly introduces additional work - work that may have been elided had I heeded Simon's first suggestion. 
 
 ### 2. Know What Your Idea Is
 
@@ -61,7 +71,9 @@ Now that we know _what_ our idea is, we need to figure out _how_ best to communi
 
 Anyone who has done any paper-reading should recognize this as the general structure of most research work. The critical insight that I took away from this section of Simon's presentation is that **there is a reason papers are structured this way.** That is, the typical or expected sections of a research paper are not just empty boxes with an attached label, waiting for us to fill them with content. Instead, **these are the sections that naturally emerge when we tell a story** which is ultimately what we should strive to do.
 
-Despite being very new to the process of writing research papers, I already find that I frequently get bogged-down in filling in the content that is expected of me in each section of the paper. This is the wrong way to think about the problem; indeed, it might even be the _opposite_ of the right way! The content in each section of the paper should be a consequence of the story we want to tell - it is not the goal in and of itself. This is a lesson that I learned again and again in English / Language Arts classes throughout high school and my undergraduate degree, but for some reason it never occurred to that it might be applicable to technical writing.
+Despite being very new to the process of writing research papers, I already find that I frequently get bogged-down in filling in the content that is expected of me in each section of the paper. This is the wrong way to think about the problem; indeed, it might even be the _opposite_ of the right way! 
+
+The content in each section of the paper should be a consequence of the story we want to tell - it is not the goal in and of itself. This is a lesson that I learned again and again in English / Language Arts classes throughout high school and my undergraduate degree, but for some reason it never occurred to that it might be applicable to technical writing.
 
 ### 4. Nail Your Contributions to the Mast
 
@@ -73,7 +85,9 @@ Simon recommends a minimal introduction that consists of just the following two 
 
 There are a number of good reasons for keeping the introduction concise, the most important being that the time and attention of our readers is limited. The introduction may be the only section of our paper that someone reads, and at the very least it is our first chance to capture readers' attention.
 
-Simon's advice on the best way to do this is to lead with a specific example. It is natural for us to want to provide sufficient context for the problem prior to proposing our solution, but more often than not this context hurts our introduction more than it helps it. We wander through several paragraphs of background information and motivation, and by the time we reach our idea, we have lost our reader's focus. The alternative is to immediately identify our little corner of the problem space and attack it directly. To use Simon's analogy, we should not waste our precious space in the introduction describing the entire mountain, instead we should quickly focus in on the molehill that our idea addresses.
+Simon's advice on the best way to do this is to lead with a specific example. It is natural for us to want to provide sufficient context for the problem prior to proposing our solution, but more often than not this context hurts our introduction more than it helps it. We wander through several paragraphs of background information and motivation, and by the time we reach our idea, we have lost our reader's focus. 
+
+The alternative is to immediately identify our little corner of the problem space and attack it directly. To use Simon's analogy, we should not waste our precious space in the introduction describing the entire mountain, instead we should quickly focus in on the molehill that our idea addresses.
 
 To make this idea concrete, let's look at a specific example. The passage below is taken from the introductory section of a preliminary report on my research:
 
@@ -120,7 +134,9 @@ In a typical research paper, what section follows the introduction? In about 50%
 - Problem 1: At this point in the paper, you have not gotten to your idea yet, so your compressed description of alternative approaches is incomprehensible.
 - Problem 2: Describing alternative approaches gets between the reader and your idea.
 
-Based on my personal experience, I agree wholeheartedly with these observations. Indeed, most of the time that I encounter a related works section that comes before the actual contributions of the paper, I skim through it or skip over it entirely, and only on rare occasions do I circle back around to read it once I am prepared to do so. By saving the related work section until the end, we give ourselves the opportunity to **take the reader to our idea via the most direct path**. This maximizes the probability that they will have our idea in mind when they walk away from the paper.
+Based on my personal experience, I agree wholeheartedly with these observations. Indeed, most of the time that I encounter a related works section that comes before the actual contributions of the paper, I skim through it or skip over it entirely, and only on rare occasions do I circle back around to read it once I am prepared to do so. 
+
+By saving the related work section until the end, we give ourselves the opportunity to **take the reader to our idea via the most direct path**. This maximizes the probability that they will have our idea in mind when they walk away from the paper.
 
 Also on the topic of related work, Simon reminds us that **credit is like love, not money**. Technical research is not a zero-sum game, so we don't need to make others' ideas look bad to make our own look good or worthy of consideration. 
 
@@ -128,9 +144,13 @@ Also on the topic of related work, Simon reminds us that **credit is like love, 
 
 We have covered the content in the introduction and related work, and finally we come to the heart of the paper - the description of our idea. Simon's advice here is simple yet powerful: **don't recapitulate your entire journey for your readers**. 
 
-When we begin our research, the path forward may be unclear, and we may encounter many obstacles along the way. If you are anything like me, you might be tempted to subject your readers to a similar experience. We _could_ take our readers by the hand and lead them through the twists and turns of the research maze so that they might appreciate how clever we are to have emerged on the other side. But this is orthogonal to our true purpose, which is to communicate our idea. The journey may be interesting, but we should only include those aspects that are directly relevant to the end result. Save the gory details for a blog post or another alternative medium.
+When we begin our research, the path forward may be unclear, and we may encounter many obstacles along the way. If you are anything like me, you might be tempted to subject your readers to a similar experience. 
 
-This highlights an even more fundamental principle that might not occur to novice researchers (and may be forgotten by those with more experience): **scientific research is not about you**. It is about innovating, advancing the state-of-the-art, and moving this entire human experiment forward (if only by an inch). Don't get me wrong, I want to see my name on the authors line as much as the next guy (especially in that hallowed first position). This can be a powerful motivator when working through some of the more difficult parts of the research process, but we must not allow this motivation to bleed through into the content of the paper itself. In doing so, we keep the focus where it belongs: the communication of our idea to the broader research community.
+We _can_ take our readers by the hand and lead them through the twists and turns of the research maze so that they might appreciate how clever we are to have emerged on the other side. But this is orthogonal to our true purpose, which is to communicate our idea. The journey may be interesting, but we should only include those aspects that are directly relevant to the end result. Save the gory details for a blog post or another alternative medium.
+
+This highlights an even more fundamental principle that might not occur to novice researchers (and may be forgotten by those with more experience): **scientific research is not about you**. It is about innovating, advancing the state-of-the-art, and moving this entire human experiment forward (if only by an inch). 
+
+Don't get me wrong, I want to see my name on the authors line as much as the next guy (especially in that hallowed first position). This can be a powerful motivator when working through some of the more difficult parts of the research process, but we must not allow this motivation to bleed through into the content of the paper itself. In doing so, we keep the focus where it belongs: the communication of our idea to the broader research community.
 
 ### 7. Listen to Your Readers
 
@@ -146,9 +166,9 @@ I struggle mightily with this final suggestion. While I understand _intellectual
 
 ### Conclusion
 
-There you have it, seven actionable recommendations for writing better research papers. I hope you learned as much reading this post as I did writing it. 
+There you have it, seven actionable recommendations for writing better research papers. I hope you learned as much reading this post as I did writing it!
 
-Thank you to Professor Simon Peyton Jones for sharing your suggestions and making them publicly available, I know at least one novice researcher who is benefiting greatly from them.
+Thank you to Professor Simon Peyton Jones for sharing your suggestions and presenting them in such a compelling manner. I know at least one novice researcher who is benefiting greatly from them.
 
 ### References
 
