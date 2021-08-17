@@ -1,5 +1,5 @@
 ---
-layout: post"
+layout: "post"
 title: "Cryptography for Cybersecurity Professionals"
 ---
 
