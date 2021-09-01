@@ -23,7 +23,7 @@ The first thing we need to select is the AWS Machine Image (AMI) for our instanc
 
 ![ubuntu](https://github.com/turingcompl33t/turingcompl33t.github.io/blob/master/images/2021-8-31-BusTub-On-EC2/ubuntu.jpg?raw=true)
 
-On the next page we select our instance type. Again, for our minimal setup we select a `t2.micro` instance type. Later, if you find that builds run too slowly, or you exhaust the instance's memory when linking the project, you can upgrade the instance type here to one with more powerful specificiations.
+On the next page we select our instance type. Again, for our minimal setup we select a `t2.micro` instance type. Using this type restricts the resources (memory, compute) available in our build environment, but keeps us on the free tier.
 
 ![config](https://github.com/turingcompl33t/turingcompl33t.github.io/blob/master/images/2021-8-31-BusTub-On-EC2/config.png?raw=true)
 
