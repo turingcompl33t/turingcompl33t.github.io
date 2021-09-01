@@ -13,7 +13,7 @@ Once you have created your account (or if you already have one) sign into the AW
 
 ![ec2](https://github.com/turingcompl33t/turingcompl33t.github.io/blob/master/images/2021-8-31-BusTub-On-EC2/ec2.jpg?raw=true)
 
-The main page for the EC2 service gives you an overview of your currently resource usage on EC2 (if any). From this page, select _Launch instance_.
+The main page for the EC2 service gives you an overview of your current resource usage on EC2 (if any). From this page, select _Launch instance_.
 
 ![launch](https://github.com/turingcompl33t/turingcompl33t.github.io/blob/master/images/2021-8-31-BusTub-On-EC2/launch.jpg?raw=true)
 
