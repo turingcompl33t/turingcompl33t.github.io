@@ -9,6 +9,8 @@ This post describes several options for deploying containerized applicatons on A
 
 All major cloud service providers present services for deploying containerized applications. Amazon Web Services (AWS) is no exception. In fact, this post was inspired by a [recent article](https://www.lastweekinaws.com/blog/the-17-ways-to-run-containers-on-aws/) that discusses 17 distinct ways to deploy containers on AWS. With all of these available options, how do we select the one that is most appropriate for our particular application?
 
+As you might expect, there are tradeoffs present across these container deployment offerings. The way these tradeoffs align with the particular requirements of our application 
+
 The methods we will consider include:
 
 - [AppRunner](#apprunner)
@@ -26,6 +28,12 @@ curl https://<PATH.TO.HOST>/recommend/<USER_ID>
 The expected response is a comma-separated list of movie identifiers.
 
 This post is intended for a (relatively) general audience. I provide an appendix at the end of this post with some additional technical details for those who would like to follow along and try out these services themselves.
+
+### Why Containers?
+
+Containerization takes some additional work beyond development of your application. Why should we bother with containers at all? What problem do they solve?
+
+
 
 ### AppRunner
 
@@ -46,9 +54,25 @@ curl https://pbueku8vmz.us-east-1.awsapprunner.com/recommend/0
 
 As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner explains, we pay for both compute and memory resources used by our application.
 
+**Benefits**
+- The setup for AppRunner is simple and can be completed quickly, without prior experience in cloud computing technologies.
+- The AppRunner service provides builtin auto-scaling and load-balancing. This makes scaling deployments of containers on AppRunner extremely simple.
+
+**Drawbacks**
+- The configurability of the service is low. AppRunner does not allow fine-grained control of your infrastructure.
+
 ### Lightsail Containers
 
 ### EC2
+
+AWS [Elastic Compute Cloud](https://aws.amazon.com/ec2/) (EC2) is the primary infrastructure-as-a-service offering on AWS. This means that with EC2, we are given low-level access to the cloud infrastructure, instead of being presented with a high-level interface to a platform or service offered by AWS.
+
+**Benefits**
+- EC2 
+
+**Drawbacks**
+- Setting up a container deployment on EC2 requires manual infrastructure provisioning and configuration. Some of these steps can be automated through infrastructure management tools like [Terraform](https://www.terraform.io/).
+- As an IaaS offering, EC2 does not automatically provide higher-level functionality such as autoscaling and load-balancing. Scaling a container deployment on EC2 therefore requires significantly more manual effort than other services with a higher-level API.
 
 ### ECS
 
