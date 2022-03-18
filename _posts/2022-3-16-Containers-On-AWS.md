@@ -16,8 +16,8 @@ The methods we will consider include:
 - [AppRunner](#apprunner)
 - [Lightsail Containers](#lightsail-containers)
 - [EC2](#ec2)
-- [ECS](#ecs)
 - [Lambda](#lambda)
+- [ECS](#ecs)
 
 Throughout this post I will use a machine learning inferennce service as an example application, but the concepts are generalizable to other containerized applications. The inference service in this example provides movie recommendations for users over HTTP(S). An example request to the service looks like:
 
@@ -33,7 +33,7 @@ This post is intended for a (relatively) general audience. I provide an appendix
 
 Containerization takes some additional work beyond development of your application. Why should we bother with containers at all? What problem do they solve?
 
-
+TODO
 
 ### AppRunner
 
@@ -91,11 +91,45 @@ AWS [Elastic Compute Cloud](https://aws.amazon.com/ec2/) (EC2) is the primary in
 - Setting up a container deployment on EC2 requires manual infrastructure provisioning and configuration. Some of these steps can be automated through infrastructure management tools like [Terraform](https://www.terraform.io/).
 - As an IaaS offering, EC2 does not automatically provide higher-level functionality such as autoscaling and load-balancing. Scaling a container deployment on EC2 therefore requires significantly more manual effort than other services with a higher-level API.
 
-### ECS
-
 ### Lambda
 
+TODO
 
+### ECS
+
+AWS [Elastic Container Service](https://aws.amazon.com/ecs/) (ECS) is among the most flexible and powerful options for deploying containers on AWS. ECS is similar to [Kubernetes](https://kubernetes.io/) (and therefore the Kubernetes offering on AWS, [EKS](https://aws.amazon.com/eks/)) in that it abstracts the notion of container services away from the underlying resources on which the services run, but it takes a somewhat lighter-weight approach. I find ECS simpler to work with in many respects (e.g. initial setup, management) than EKS, although the tooling available for working with Kubernetes may tip the scales in the other direction.
+
+With ECS, we define our service in (roughly) two stages:
+- Describe the containers that implement our application logic
+- Describe the resources (compute, memory, storage, etc.) on which we want these containers to run
+
+AWS provides options for deploying ECS services on many different resources, including manually-cosntructed clusters of EC2 instances and a serverless compute option called [Fargate](https://aws.amazon.com/fargate/). Without Fargate, we must manually manage the cluster of instances that run our containers. With Fargate, however, we never work about individual instances, and instead we simply define the resources that our container service needs and allow Fargate to handle the process of allocating these resources for us. This is the approach we will take in our deployment.
+
+With the power and flexibility of this approach comes complexity. Setting up an ECS container service on Fargate requires significantly more configuration effort than the other options for deployment we have seen thus far. For this reason, I find it useful to automate much of the process with an infrastructure automation tool like Terraform. We omit the details here, but see the [appendix](#setting-up-an-ecs-service-on-fargate) for more details.
+
+Once the service is running, ECS provides us with an interface that describes both the cluster as well as all of the services that we have running on it. Currently, we have a single movie recommendation service deployed to the cluster.
+
+![ECS Tasks](../images/2022-3-16-Containers-On-AWS/ecs.png)
+
+We can navigate to the service to see more details, including the definition of individual tasks that run within the context of this service. Each one of these tasks represents a single container instance.
+
+![ECS Tasks](../images/2022-3-16-Containers-On-AWS/ecs-tasks.png)
+
+Exposing an ECS cluster to external traffic is slightly more involved than it is for the other services we have explored. The cluster is not available to external traffic by default. Instead, we create an AWS application load balancer that routes external traffic to our cluster. This is available as its own resource on EC2.
+
+![ECS ALB](../images/2022-3-16-Containers-On-AWS/ecs-alb.png)
+
+Once we have the DNS name from the load balancer, we can hit the service with requests:
+
+```bash
+curl http://inference-frontend-368665810.us-east-1.elb.amazonaws.com:8082/recommend/0
+```
+
+ECS is a great option for scalable, production container deployments. It is by far the most configurable and tunable service explored in this post, and is only rivaled by EKS in this regard across all offerings for container deployment on AWS. ECS provides builtin functionality for automatic scaling and deployments, although load balancing must be configured separately as we saw above.
+
+The pricing for ECS is reasonable. AWS does not charge additional fees for ECS clusters, so we only pay for the underlying resources on which our ECS cluster runs. When we couple this with Fargate, we get the cost-saving benefits of serverless computing - we only pay for the resources that we use, and don't waste money on resources that sit idle. Therefore, ECS combines the efficiency of other serverless computing options like AWS lambda with much greater potential for scalability and configurability.
+
+However, deploying containers on ECS with Fargate is not without its drawbacks, the primary one being the added complexity of setup and management. Management complexity is exacerbated by the fact that ECS does not come with a dedicated community of developers creating tooling that eases the burden. Other options like Kubernetes on AWS EKS have an edge in this regard.
 
 ### Appendix: Preparing a Container
 
@@ -201,6 +235,77 @@ docker tag inference:latest ${REPO_URI}
 # Push to our public repository on ECR
 docker push ${REPO_URI}
 ```
+
+### Setting Up an ECS Service on Fargate
+
+Most of the configuration required for an ECS cluster on Fargate is standard AWS fare (e.g. security groups, availability zones, etc.). The two important resources are the `aws_ecs_cluster` that defines our cluster and the Fargate definition.
+
+The `aws_ecs_cluster` resource simply defines the cluster and how its capacity is provided.
+
+```terraform
+resource "aws_ecs_cluster" "cluster" {
+  name = "inference-cluster"
+
+  capacity_providers = ["FARGATE_SPOT", "FARGATE"]
+
+  default_capacity_provider_strategy {
+    capacity_provider = "FARGATE"
+  }
+
+  setting {
+    name  = "containerInsights"
+    value = "disabled"
+  }
+}
+```
+
+The `fargate` module defines most of the details of our service, including the image of the container that will be run as well as the resources allocated to each of these containers.
+
+```
+module "fargate" {
+  source  = "umotif-public/ecs-fargate/aws"
+  version = "~> 6.0.0"
+
+  name_prefix        = "recommendation-service"
+  vpc_id             = data.aws_vpc.default.id
+  private_subnet_ids = [data.aws_subnet.east1a.id, data.aws_subnet.east1b.id]
+
+  cluster_id = aws_ecs_cluster.cluster.id
+
+  wait_for_steady_state = true
+
+  desired_count = var.desired_count
+
+  # The image of the container that tasks will run
+  task_container_image = var.task_container_image
+
+  # The capacity of individual tasks
+  task_definition_cpu    = var.task_definition_cpu
+  task_definition_memory = var.task_definition_memory
+
+  task_container_port             = var.task_container_port
+  task_container_assign_public_ip = var.task_container_assign_public_ip
+
+  load_balanced = true
+
+  target_groups = [
+    {
+      target_group_name = var.target_group_name
+      container_port    = var.task_container_port
+    }
+  ]
+
+  health_check = {
+    port = var.task_container_port
+    path = "/"
+  }
+
+  depends_on = [
+    module.alb
+  ]
+}
+```
+
 
 ### Preparing a Container for Lambda
 
