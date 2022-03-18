@@ -11,7 +11,11 @@ All major cloud service providers present services for deploying containerized a
 
 As you might expect, there are tradeoffs present across these container deployment offerings. The way these tradeoffs align with the particular requirements of our application determines the deployment option we select. In this post, we explore several options for container deployment on AWS, and compare their characteristics that are relevant to making a deployment decision.
 
-We consider _scalability_. These are aspects of the deployment option that influence our ability to handle 
+We consider _usability_. This is the relative level of difficulty involved in deploying and managing the service. I will also use the term _complexity_ to refer to this metric throughout this post.
+
+We also consider _scalability_. These are aspects of the deployment option that influence the service's ability to cope with increasing load. Scalability considers both the ease with which the deployment can be expanded (e.g. are auto-scaling and load-balancing included?) as well as the capability of the service to cope with faults (e.g. are containers that are killed automatically repopulated?).
+
+Finally, we consider _pricing_. This is the complexity of the pricing model that AWS uses for the deployment option, as well as the relative cost of the resources we get.
 
 The methods we will consider are listed below, roughly in order of complexity.
 
@@ -35,7 +39,9 @@ This post is intended for a (relatively) general audience. I provide an appendix
 
 Containerization takes some additional work beyond development of your application. Why should we bother with containers at all? What problem do they solve?
 
-TODO
+Deploying software is difficult. Differences between the development and the runtime environment, as well as difference among runtime environments makes it challenging to ensure that our applications will run consistently everywhere. Furthermore, packaging the dependencies of our applications also poses a challenge. Should we rely on the user to install dependencies before they run our application? Should we download and install these dependencies on the local system during application startup? Neither of these options provides a particularly attractive user experience.
+
+Containers solve these issues of heterogenous deployment environments and dependency management, thereby simplifying software deployments. Once we have packaged our application within a container, we can rely on a single, common interface (the container runtime) between our application and the underlying resources on which it executes. Our application can run anywhere a container runtime is available with the guarantee that the execution environment is the same as when we tested it locally and that all dependencies will be available.
 
 ### AppRunner
 
@@ -48,56 +54,70 @@ TODO
 
 However, all of these configuration options come set with reasonable defaults. I found that the entire process of deploying an application on AppRunner takes just 30 seconds to click through, but the subsequent deployment of the service can take some time (~3 minutes).
 
-Once the service is running, AppRunner provides us with a public address that we can use to make inference queries:
 
-```
+![AppRunner](../images/2022-3-16-Containers-On-AWS/apprunner.png)
+
+Once the service is running, AppRunner provides us with a public address that we can use to make inference queries. We can hit this address with a request to verify that the deployment is working as expected
+
+```bash
 curl https://pbueku8vmz.us-east-1.awsapprunner.com/recommend/0
 ```
 
-As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner explains, we pay for both compute and memory resources used by our application. The page also provides a detailed cost breakdown for some sample workloads. One of these workloads, the _Lightweight, Latency-Sensitive API_ seems particularly appropriate for our use case of a movie recommendation service, and the calculations from AWS estimate the cost of this workload at **$25.50 per month**. This is the cost estimate we will use for AppRunner.
+Clearly, the setup for AppRunner is simple and can be completed quickly, without prior experience in cloud computing technologies. This is a major benefit of this service.
 
-**Benefits**
-- The setup for AppRunner is simple and can be completed quickly, without prior experience in cloud computing technologies.
-- The AppRunner service provides builtin auto-scaling and load-balancing. This makes scaling deployments of containers on AppRunner extremely simple.
+From a scalability standpoint, the AppRunner service provides builtin auto-scaling and load-balancing. This makes scaling deployments of containers on AppRunner extremely simple, and provides reasonable guarantees that our service will remain available once deployed. Additionally, AppRunner supports automatic re-deployment of our service whenever a new image is uploaded to the image repository. This makes versioning of the service relatively simple.
 
-**Drawbacks**
-- The configurability of the service is low. AppRunner does not allow fine-grained control of your infrastructure.
+As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner explains, we pay for both compute and memory resources used by our application. The page also provides a detailed cost breakdown for some sample workloads. One of these workloads, the _Lightweight, Latency-Sensitive API_ seems particularly appropriate for our use case of a movie recommendation service, and the calculations from AWS estimate the cost of this workload at $25.50 per month. The pricing model is not particularly simple, but these sample calculations can give us a good indication of how much it might cost to deploy a service of our desired scale with AppRunner.
 
-automatic re-deployment whenever a new image is uploaded to the respository.
+AppRunner is not without its drawbacks, however. The configurability of the service is remarkably low. This is obviously a design choice for the service, but the fact remains that AppRunner does not allow fine-grained control of your infrastructure. This makes things like multi-container deployments difficult.
+
+AppRunner is a convenient way to get containers running on the cloud quickly. I would use AppRunner during development of a containerized application or in an academic setting. For a production deployment, however, I believe the level of control and visibility offered by AppRunner is insufficient.
 
 ### Lightsail Containers
 
 [AWS Lightsail](https://aws.amazon.com/lightsail/) is a virtual private server (VPS) offering from AWS. Lightsail is similar in some ways to infrastructure offerings (such as EC2) in that it provides direct access to a virtual server in the cloud. However, Lightsail differentiates itself by providing a higher-level API to raw computing resources, presenting a less-involved web interface for new deployments and a simpler pricing model.
 
-Lightsail introduces the concept of _Container Services_ on top of its VPS offering.
+Lightsail introduces the concept of _Container Services_ on top of its VPS offering. Based on the description in the [blog post](https://aws.amazon.com/blogs/aws/lightsail-containers-an-easy-way-to-run-your-containers-in-the-cloud/) that introduced this feature, this is largely a bundling of existing services such as Lightsail VPS, Application Load Balancers (on EC2), and managed Relational Database (RDS) instances. For us, this means that we can specify the container image that we want to run and the resources that we want to allocate to it and Lightsail takes care of the rest.
+
+Like AppRunner, the setup process for Lightsail containers is relatively simple. Once we select the container image, we are given an option for the _power_ of the nodes on which our containers run as well as the _scale_ (or number of nodes) of the service.
+
+![Lightsail Pricing](../images/2022-3-16-Containers-On-AWS/lightsail-pricing.png)
+
+This is a coarse-grained pricing model relative to AppRunner (and some of the other services we will see later). This has the benefit of making it easier to reason about the cost of deploying with Lightsail, but has the drawback that we pay for resources regardless of their utilization.
+
+Once we have a deployment running on Lightsail, we are presented with a dashboard with the details of our service.
+
+![Lightsail](../images/2022-3-16-Containers-On-AWS/lightsail.png)
+
+Lightsail provides a public address for our deployment that we can use to verify that it is operating as expected:
 
 ```bash
 curl https://container-service-1.43f879qo1glao.us-east-1.cs.amazonlightsail.com/recommend/0
 ```
 
-Features
-- no autoscaling
-- manual scaling after deployment 
-- load balancing among nodes
-- multicontainer services
-- simple interface for metrics
+From a scalability standpoint, Lightsail leaves much to be desired. It does not provide automatic scaling of infrastructure to cope with increased load. However, it does allow for manual scaling after a deployment has taken place. Furthermore, it automatically, provides load balancing among individual nodes via an AWS Application Load Balancer.
 
-### EC2
+Lightsail provides some additional flexibility that is missing from AppRunner. Specifically, Lightsail Containers supports multi-container deployments wherein we want to deploy a set of heterogenous container images at the same time. This is a scenario that might be commonly seen in microservice architectures.
 
-AWS [Elastic Compute Cloud](https://aws.amazon.com/ec2/) (EC2) is the primary infrastructure-as-a-service offering on AWS. This means that with EC2, we are given low-level access to the cloud infrastructure, instead of being presented with a high-level interface to a platform or service offered by AWS.
-
-**Benefits**
-- EC2 
-
-**Drawbacks**
-- Setting up a container deployment on EC2 requires manual infrastructure provisioning and configuration. Some of these steps can be automated through infrastructure management tools like [Terraform](https://www.terraform.io/).
-- As an IaaS offering, EC2 does not automatically provide higher-level functionality such as autoscaling and load-balancing. Scaling a container deployment on EC2 therefore requires significantly more manual effort than other services with a higher-level API.
+Lightsail improves on the shortcomings of AppRunner in some ways. The service abstraction allows us to scale our deployment beyond individual containers, which is likely a critical aspect in many production deployments. However, it falls at an awkward spot on the container deployment offering spectrum. For development I would use AppRunner over Lightsail Containers, while for anything more mature than development I would default to ECS (see [below](#ecs)). For this reason, I am not convinced of the utility of Lightsail in container deployments.
 
 ### Lambda
 
-TODO
+[Lambda](https://aws.amazon.com/lambda/) is a lightweight, serverless compute offering from AWS. With Lambda, we define _functions_ that are invoked in response to events. These functions may be authored in one of several programming languages (e.g. Python, Java, JavaScript) run on cloud infrastructure managed by AWS.
 
-See [the appendix](#preparing-a-container-for-lambda) for additional details on the changes required when building a container image for deployment on Lambda.
+Until recently, Lambda only supported executing cloud functions distributed in a custom format defined by AWS (deployment packages), but now Lambda also supports cloud functions distributed as Docker containers.
+
+The function interface defined by Lambda is slightly difference from the web (HTTP) interface we have assumed thus far in this post. This necessitates modifying some logic of your application is you want to deploy a containerized web service with Lambda Containers. Furthermore, a container that executes on Lambda requires some [additional dependencies](https://docs.aws.amazon.com/lambda/latest/dg/runtimes-images.html) beyond those of your application, namely the Lambda Runtime Interface package. This requires modifying the process by which you build your container image to work with Lambda. See [this post](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/) for additional details on the changes required when building a container image for deployment on Lambda.
+
+Once we have a properly-built container image, we can deploy it on Lambda in just a few moments. The interface for function creation is just a single page:
+
+![Lambda Create](../images/2022-3-16-Containers-On-AWS/lambda-create.png)
+
+Once the function is created, we must expose the function over HTTP with the help of [Amazon API Gateway](https://aws.amazon.com/api-gateway/). 
+
+With lambda, we only pay for the resources that we use. Lambda manages instances of our containers in the background, spinning up more resources to service requests when necessary (up to a configurable limit) and spinning them down again when demand declines. This is in contrast to an offering like Lightsail Containers wherein we pay the cost of the infrastructure no matter what the current load on the system is. This feature also has implications for scalability in that AWS automatically handle scaling and load-balancing on our behalf.
+
+
 
 ### ECS
 
@@ -107,9 +127,9 @@ With ECS, we define our service in (roughly) two stages:
 - Describe the containers that implement our application logic
 - Describe the resources (compute, memory, storage, etc.) on which we want these containers to run
 
-AWS provides options for deploying ECS services on many different resources, including manually-cosntructed clusters of EC2 instances and a serverless compute option called [Fargate](https://aws.amazon.com/fargate/). Without Fargate, we must manually manage the cluster of instances that run our containers. With Fargate, however, we never work about individual instances, and instead we simply define the resources that our container service needs and allow Fargate to handle the process of allocating these resources for us. This is the approach we will take in our deployment.
+AWS provides options for deploying ECS services on many different resources, including manually-constructed clusters of EC2 instances and a serverless compute option called [Fargate](https://aws.amazon.com/fargate/). Without Fargate, we must manually manage the cluster of instances that run our containers. With Fargate, however, we never worry about individual instances, and instead we simply define the resources that our container service needs and allow Fargate to handle the process of allocating these resources for us. This is the approach we will take in our deployment.
 
-With the power and flexibility of this approach comes complexity. Setting up an ECS container service on Fargate requires significantly more configuration effort than the other options for deployment we have seen thus far. For this reason, I find it useful to automate much of the process with an infrastructure automation tool like Terraform. We omit the details here, but see the [appendix](#setting-up-an-ecs-service-on-fargate) for more details.
+With the power and flexibility of this approach comes complexity. Setting up an ECS container service on Fargate requires significantly more configuration effort than the other options for deployment we have seen thus far. For this reason, I find it useful to automate much of the process with an infrastructure automation tool like Terraform. We omit the details here, but see the [appendix](#setting-up-an-ecs-service-on-fargate) for more.
 
 Once the service is running, ECS provides us with an interface that describes both the cluster as well as all of the services that we have running on it. Currently, we have a single movie recommendation service deployed to the cluster.
 
@@ -317,3 +337,4 @@ module "fargate" {
 ### References
 
 - [The 17 Ways to Run Containers on AWS](https://www.lastweekinaws.com/blog/the-17-ways-to-run-containers-on-aws/)
+- [AWS Lambda Container Image Support](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/)
