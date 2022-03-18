@@ -52,7 +52,7 @@ Once the service is running, AppRunner provides us with a public address that we
 curl https://pbueku8vmz.us-east-1.awsapprunner.com/recommend/0
 ```
 
-As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner explains, we pay for both compute and memory resources used by our application.
+As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner explains, we pay for both compute and memory resources used by our application. The page also provides a detailed cost breakdown for some sample workloads. One of these workloads, the _Lightweight, Latency-Sensitive API_ seems particularly appropriate for our use case of a movie recommendation service, and the calculations from AWS estimate the cost of this workload at **$25.50 per month**. This is the cost estimate we will use for AppRunner.
 
 **Benefits**
 - The setup for AppRunner is simple and can be completed quickly, without prior experience in cloud computing technologies.
@@ -61,7 +61,24 @@ As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner e
 **Drawbacks**
 - The configurability of the service is low. AppRunner does not allow fine-grained control of your infrastructure.
 
+automatic re-deployment whenever a new image is uploaded to the respository.
+
 ### Lightsail Containers
+
+[AWS Lightsail](https://aws.amazon.com/lightsail/) is a virtual private server (VPS) offering from AWS. Lightsail is similar in some ways to infrastructure offerings (such as EC2) in that it provides direct access to a virtual server in the cloud. However, Lightsail differentiates itself by providing a higher-level API to raw computing resources, presenting a less-involved web interface for new deployments and a simpler pricing model.
+
+Lightsail introduces the concept of _Container Services_ on top of its VPS offering.
+
+```bash
+curl https://container-service-1.43f879qo1glao.us-east-1.cs.amazonlightsail.com/recommend/0
+```
+
+Features
+- no autoscaling
+- manual scaling after deployment 
+- load balancing among nodes
+- multicontainer services
+- simple interface for metrics
 
 ### EC2
 
@@ -77,6 +94,8 @@ AWS [Elastic Compute Cloud](https://aws.amazon.com/ec2/) (EC2) is the primary in
 ### ECS
 
 ### Lambda
+
+
 
 ### Appendix: Preparing a Container
 
@@ -123,6 +142,8 @@ With this setup, we can run the following command to build our image locally wit
 docker build --tag inference .
 ```
 
+**Pushing to a Private Registry**
+
 Now that the container is built, we can upload it to [ECR](https://aws.amazon.com/ecr/). The following commands assume that you have the following environment variables set in your shell session:
 
 ```bash
@@ -153,6 +174,37 @@ docker push ${AWS_ID}.dkr.ecr.${AWS_REGION}.amazonaws.com/${REPO_NAME}:inference
 ```
 
 Now our container image is available at `<AWS_ID>.dkr.ecr.us-east-1.amazonaws.com/<REPO_NAME>:inference-latest` and is ready for deployment via the services explored throughout the rest of this post.
+
+**Pushing to a Public Registry**
+
+Some of the services explored in this post (e.g. Lightsail Containers) require that the container image be deployed to a public image registry. The process for deploying an image to a public registry on ECR is nearly identical to that of deploying to a private registry, but I'll recapitulate the commands here.
+
+First we need to authenticate with the public registry:
+
+```bash
+aws ecr-public get-login-password --region ${AWS_REGION} | docker login --username AWS --password-stdin public.ecr.aws
+```
+
+Once we are authenticated, we can create the public repository:
+
+```bash
+aws ecr-public create-repository \
+    --repository-name ${REPO_NAME} \
+    --region ${AWS_REGION}
+```
+
+The output of this command specifies the `REPOSITORY_URI` that we need in the following commands. Finally, we push the image to the repository:
+
+```bash
+# Tag the image
+docker tag inference:latest ${REPO_URI}
+# Push to our public repository on ECR
+docker push ${REPO_URI}
+```
+
+### Preparing a Container for Lambda
+
+Authentication may fail when attempting to pull from public ECR repository while authenticated. Just logout and try again.
 
 ### References
 
