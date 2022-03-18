@@ -71,7 +71,7 @@ As the [pricing](https://aws.amazon.com/apprunner/pricing/) page for AppRunner e
 
 AppRunner is not without its drawbacks, however. The configurability of the service is remarkably low. This is obviously a design choice for the service, but the fact remains that AppRunner does not allow fine-grained control of your infrastructure. This makes things like multi-container deployments difficult.
 
-AppRunner is a convenient way to get containers running on the cloud quickly. I would use AppRunner during development of a containerized application or in an academic setting. For a production deployment, however, I believe the level of control and visibility offered by AppRunner is insufficient.
+**Conclusion** AppRunner is a convenient way to get containers running on the cloud quickly. I would use AppRunner during development of a containerized application or in an academic setting. For a production deployment, however, I believe the level of control and visibility offered by AppRunner is insufficient.
 
 ### Lightsail Containers
 
@@ -99,7 +99,7 @@ From a scalability standpoint, Lightsail leaves much to be desired. It does not 
 
 Lightsail provides some additional flexibility that is missing from AppRunner. Specifically, Lightsail Containers supports multi-container deployments wherein we want to deploy a set of heterogenous container images at the same time. This is a scenario that might be commonly seen in microservice architectures.
 
-Lightsail improves on the shortcomings of AppRunner in some ways. The service abstraction allows us to scale our deployment beyond individual containers, which is likely a critical aspect in many production deployments. However, it falls at an awkward spot on the container deployment offering spectrum. For development I would use AppRunner over Lightsail Containers, while for anything more mature than development I would default to ECS (see [below](#ecs)). For this reason, I am not convinced of the utility of Lightsail in container deployments.
+**Conclusion** Lightsail improves on the shortcomings of AppRunner in some ways. The service abstraction allows us to scale our deployment beyond individual containers, which is likely a critical aspect in many production deployments. However, it falls at an awkward spot on the container deployment offering spectrum. For development I would use AppRunner over Lightsail Containers, while for anything more mature than development I would default to ECS (see [below](#ecs)). For this reason, I am not convinced of the utility of Lightsail in container deployments.
 
 ### Lambda
 
@@ -113,11 +113,17 @@ Once we have a properly-built container image, we can deploy it on Lambda in jus
 
 ![Lambda Create](../images/2022-3-16-Containers-On-AWS/lambda-create.png)
 
-Once the function is created, we must expose the function over HTTP with the help of [Amazon API Gateway](https://aws.amazon.com/api-gateway/). 
+Function creation typically completes quickly. The interface for a deployed function includes mechanisms for monitoring function activity and deploying new versions of the function.
 
-With lambda, we only pay for the resources that we use. Lambda manages instances of our containers in the background, spinning up more resources to service requests when necessary (up to a configurable limit) and spinning them down again when demand declines. This is in contrast to an offering like Lightsail Containers wherein we pay the cost of the infrastructure no matter what the current load on the system is. This feature also has implications for scalability in that AWS automatically handle scaling and load-balancing on our behalf.
+![Lambda Create](../images/2022-3-16-Containers-On-AWS/lambda-setup.png)
 
+Once the function is created, we must expose the function over HTTP with the help of [Amazon API Gateway](https://aws.amazon.com/api-gateway/). Again, I defer to [this post](https://aws.amazon.com/blogs/aws/new-for-aws-lambda-container-image-support/) for specific instructions on setting up API Gateway for use with a Lambda.
 
+With Lambda, we provision resources dynamically. Lambda manages instances of our containers in the background, spinning up more resources to service requests when necessary (up to a configurable limit) and spinning them down again when demand declines. This is in contrast to an offering like Lightsail Containers wherein we pay the cost of the infrastructure no matter what the current load on the system is. This feature also has implications for scalability in that AWS automatically handles scaling and load-balancing on our behalf.
+
+This scaling mechanism also has implications for pricing. With Lambda, we only pay for the resources that we use. When demand for our service is low, we do not pay for provisioned resources, which greatly improves utilization and thus the cost-efficiency of the service. However, Lambda does include additional charges for each invocation of the function on top of the resources provisioned to handle the requests. This makes deploying large services with Lambda less cost effective than other options like ECS (see [below](#ecs)).
+
+**Conclusion** Like AppRunner, Lambda is a great option for deploying individual containers, but not necessarily for deploying an entire container infrastructure. Lack of builtin support for multi-container deployments and the constraints imposed by the Lambda function API makes composing Lambda with other services difficult, relative to other available container deployment options.
 
 ### ECS
 
@@ -154,6 +160,8 @@ ECS is a great option for scalable, production container deployments. It is by f
 The pricing for ECS is reasonable. AWS does not charge additional fees for ECS clusters, so we only pay for the underlying resources on which our ECS cluster runs. When we couple this with Fargate, we get the cost-saving benefits of serverless computing - we only pay for the resources that we use, and don't waste money on resources that sit idle. Therefore, ECS combines the efficiency of other serverless computing options like AWS lambda with much greater potential for scalability and configurability.
 
 However, deploying containers on ECS with Fargate is not without its drawbacks, the primary one being the added complexity of setup and management. Management complexity is exacerbated by the fact that ECS does not come with a dedicated community of developers creating tooling that eases the burden. Other options like Kubernetes on AWS EKS have an edge in this regard.
+
+**Conclusion** ECS container clusters combined with Fargate serverless computing is a powerful and cost-effective combination for deploying container infrastructures. The added complexity of setup and management may not be worth it for development applications or small projects, but for systems that must scale reliably, it is the only offering on AWS that can compete with Kubernetes-based solutions.
 
 ### Appendix: Preparing a Container
 
