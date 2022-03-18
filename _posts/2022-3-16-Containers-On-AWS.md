@@ -268,10 +268,6 @@ docker tag inference:latest ${REPO_URI}
 docker push ${REPO_URI}
 ```
 
-### Preparing a Container for Lambda
-
-Authentication may fail when attempting to pull from public ECR repository while authenticated. Just logout and try again.
-
 ### Setting Up an ECS Service on Fargate
 
 Most of the configuration required for an ECS cluster on Fargate is standard AWS fare (e.g. security groups, availability zones, etc.). The two important resources are the `aws_ecs_cluster` that defines our cluster and the Fargate definition.
