@@ -95,6 +95,8 @@ AWS [Elastic Compute Cloud](https://aws.amazon.com/ec2/) (EC2) is the primary in
 
 TODO
 
+See [the appendix](#preparing-a-container-for-lambda) for additional details on the changes required when building a container image for deployment on Lambda.
+
 ### ECS
 
 AWS [Elastic Container Service](https://aws.amazon.com/ecs/) (ECS) is among the most flexible and powerful options for deploying containers on AWS. ECS is similar to [Kubernetes](https://kubernetes.io/) (and therefore the Kubernetes offering on AWS, [EKS](https://aws.amazon.com/eks/)) in that it abstracts the notion of container services away from the underlying resources on which the services run, but it takes a somewhat lighter-weight approach. I find ECS simpler to work with in many respects (e.g. initial setup, management) than EKS, although the tooling available for working with Kubernetes may tip the scales in the other direction.
@@ -236,6 +238,10 @@ docker tag inference:latest ${REPO_URI}
 docker push ${REPO_URI}
 ```
 
+### Preparing a Container for Lambda
+
+Authentication may fail when attempting to pull from public ECR repository while authenticated. Just logout and try again.
+
 ### Setting Up an ECS Service on Fargate
 
 Most of the configuration required for an ECS cluster on Fargate is standard AWS fare (e.g. security groups, availability zones, etc.). The two important resources are the `aws_ecs_cluster` that defines our cluster and the Fargate definition.
@@ -261,7 +267,7 @@ resource "aws_ecs_cluster" "cluster" {
 
 The `fargate` module defines most of the details of our service, including the image of the container that will be run as well as the resources allocated to each of these containers.
 
-```
+```terraform
 module "fargate" {
   source  = "umotif-public/ecs-fargate/aws"
   version = "~> 6.0.0"
@@ -305,11 +311,6 @@ module "fargate" {
   ]
 }
 ```
-
-
-### Preparing a Container for Lambda
-
-Authentication may fail when attempting to pull from public ECR repository while authenticated. Just logout and try again.
 
 ### References
 
