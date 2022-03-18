@@ -3,15 +3,17 @@ layout: post
 title: "Container Deployment on AWS"
 ---
 
-This post describes several options for deploying containerized applicatons on AWS and the tradeoffs in terms of usability, scalability, and cost.
+This post describes several options for deploying containerized applicatons on AWS and the tradeoffs in terms of usability, scalability, and pricing.
 
 ### Overview
 
 All major cloud service providers present services for deploying containerized applications. Amazon Web Services (AWS) is no exception. In fact, this post was inspired by a [recent article](https://www.lastweekinaws.com/blog/the-17-ways-to-run-containers-on-aws/) that discusses 17 distinct ways to deploy containers on AWS. With all of these available options, how do we select the one that is most appropriate for our particular application?
 
-As you might expect, there are tradeoffs present across these container deployment offerings. The way these tradeoffs align with the particular requirements of our application 
+As you might expect, there are tradeoffs present across these container deployment offerings. The way these tradeoffs align with the particular requirements of our application determines the deployment option we select. In this post, we explore several options for container deployment on AWS, and compare their characteristics that are relevant to making a deployment decision.
 
-The methods we will consider include:
+We consider _scalability_. These are aspects of the deployment option that influence our ability to handle 
+
+The methods we will consider are listed below, roughly in order of complexity.
 
 - [AppRunner](#apprunner)
 - [Lightsail Containers](#lightsail-containers)
@@ -19,7 +21,7 @@ The methods we will consider include:
 - [Lambda](#lambda)
 - [ECS](#ecs)
 
-Throughout this post I will use a machine learning inferennce service as an example application, but the concepts are generalizable to other containerized applications. The inference service in this example provides movie recommendations for users over HTTP(S). An example request to the service looks like:
+Throughout this post I will use a machine learning inference service as an example application, but the concepts are generalizable to other containerized applications. The inference service in this example provides movie recommendations for users over HTTP(S). An example request to the service looks like:
 
 ```
 curl https://<PATH.TO.HOST>/recommend/<USER_ID>
