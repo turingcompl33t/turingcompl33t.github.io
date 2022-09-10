@@ -43,7 +43,7 @@ g++ -v
 make -v
 ```
 
-**Run Jekyll Locally**
+**Install Packages**
 
 From the [Jekyll documentation](https://jekyllrb.com/docs/):
 
@@ -52,10 +52,18 @@ From the [Jekyll documentation](https://jekyllrb.com/docs/):
 gem install jekyll bundler
 # Ensure rbenv can see new gems
 rbenv rehash
+```
 
+**Run Jekyll Locally**
+
+Start the development server with:
+
+```bash
 # Start the development server
 bundle exec jekyll serve
 ```
+
+**Troubleshooting**
 
 I ran into some issues with this step initially because I had not previously run `jekyll new ...`. I fixed this issue by running these commands in a separate directory and copying the `Gemfile` and `Gemfile.lock` that were generated.
 
