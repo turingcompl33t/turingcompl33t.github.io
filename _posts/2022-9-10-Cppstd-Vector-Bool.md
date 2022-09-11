@@ -3,27 +3,27 @@ layout: post
 title: "What has my Standard Library Done for me Lately? - the boolean specialization of std::vector"
 ---
 
-This short post explores the `std::vector<bool>` specialization of `std::vector` in the C++ standard library. Specifically, we look at how the standard library writers achieve a space-optimized implementation without sacrificing (most) of the semantics we expect from standard containers.
+This short post explores the `std::vector<bool>` specialization of `std::vector` in the C++ standard library. Specifically, we look at how the standard library writers achieve a space-optimized implementation without sacrificing (most) of the semantics we expect from standard containers, and why this optimization sometimes leads to unexpected behavior.
 
 ### Motivation
 
 The boolean specialization of `std::vector` (aka `std::vector<bool>`) has received criticism from the C++ community for years. I will leave the debate over the utility of the container to [more experienced developers](https://isocpp.org/blog/2012/11/on-vectorbool), but I would still like to understand the source of the "weirdness" associated with `std::vector<bool>`. To that end, we'll first look at some examples of `std::vector<bool>`'s misbehavior before diving into the source to determine where it originates.
 
-In his classic [Effective STL](https://www.amazon.com/Effective-STL-Specific-Standard-Template/dp/0201749629), Scott Meyers advises readers to avoid use of this container because it is not an STL container. He demonstrates this idea with a simple example:
+In his classic [Effective STL](https://www.amazon.com/Effective-STL-Specific-Standard-Template/dp/0201749629), Scott Meyers advises readers to avoid use of `std::vector<bool>` because it is not a proper STL container. He demonstrates this idea with a simple example:
 
 ```c++
 std::vector<int> v{1, 2, 3};
 int* i = &v[0];
 ```
 
-However, by replacing `int` with `bool`, we produce code that no longer compiles:
+This is perfectly valid C++. However, by replacing `int` with `bool`, we produce code that no longer compiles:
 
 ```c++
 std::vector<bool> v{true, true, false};
 bool* i = &v[0];
 ```
 
-In this instance, the compiler will report that we cannot assign the result of `&v[0]` to `bool*` because the types are incompatible.
+In this instance, the compiler will report that we cannot assign the result of `&v[0]` to `bool*` because the types are incompatible. With this example, Meyers demonstrates that `std::vector<bool>` does not support some of the semantics we expect from an STL container - namely we cannot get the location of an element (its address) in a familiar way.
 
 As a more realistic example, suppose that we want to write our own version of the STL's [`std::for_each`](https://en.cppreference.com/w/cpp/algorithm/for_each). Naturally, this implementation must be generic over the type of the element in the container. If we constrain the container type to be `std::vector`, our implementation might resemble the following:
 
@@ -73,7 +73,7 @@ produces the following error message (on GCC x86-64 12.2):
 Compiler returned: 1
 ```
 
-Again we see that the error stems from the fact that the range-`for` construct expects a `bool&` type, but the container's iterator is failing to provide this type and is instead returning a `std::_Bit_const_iterator::const_reference` type. We'll explore the implementation of a simplified version of `std::vector<bool>` to understand why this type-mismatch occurs.
+Again we see that the error stems from the fact that the range-`for` construct expects a `bool&` type, but the container's iterator is failing to provide this type and is instead returning a `std::_Bit_const_iterator::const_reference` type. Next we'll look at the implementation of a simplified version of `std::vector<bool>` to understand why this type-mismatch occurs.
 
 ### A Naive `std::vector<bool>`
 
@@ -85,7 +85,7 @@ With most compilers and standard library implementations, the size of a single `
 printf("%zu\n", sizeof(bool));
 ```
 
-prints the value `1`. In the implementation of `std::vector`, each item in the container is allocated its own storage area in a contiguous memory region (subject to alignment constraints). Together, these two facts imply that for a non-specialized implementation of `std::vector<bool>`, **each boolean element takes 1 byte**.
+prints the value `1`. Furthermore, in the implementation of `std::vector`, each item in the container is allocated its own storage area in a contiguous memory region (subject to alignment constraints). Together, these two facts imply that for a non-specialized implementation of `std::vector<bool>`, **each boolean element takes 1 byte**.
 
 It is easy to see that such an implementation is space-efficient. Each boolean element consumes a full byte of space, when we know that **the information contained in a `bool` can be expressed by a single bit**.
 
@@ -95,7 +95,9 @@ However, there is no primitive type in C++ that has a storage requirement that i
 
 To demonstrate a boolean `std::vector` specialization in the spirit of those offered by the C++ standard library, we'll write our own `BitVector` type. The complete implementation is [here](https://github.com/turingcompl33t/cpp-playground/blob/master/containers/bvector/BitVector.hpp). Note that this implementation is considerably stripped-down and does not offer the full interface provided by `std::vector`. furthermore, it is implemented in a style that would never be utilized within the standard library (for instance, it uses `std::unique_ptr` internally). This is by design, as I believe it demonstrates the topics of interest without getting bogged-down in the complexities of a more mature implementation.
 
-First, we declare a `BitType` type alias that defines the type that we will use in the implementation of our underlying storage array - in this case, `unsigned long` (the same used by GCC / libstdc++). We then declare an array of these elements owned by a `std::unique_ptr` to automatically handle deallocation.
+Our key implementation strategy for space-efficiency is representing many `bool` items in the vector with a single element in the underlying storage area. We manage individual bits of a primitive integer type and provide some logic on top to encode and decode `bool` values from these bits.
+
+We begin by declaring a `BitType` type alias that defines the type that we will use in the implementation of our underlying storage array - in this case, `unsigned long` (the same used by GCC / libstdc++). We then declare an array of these elements owned by a `std::unique_ptr` to automatically handle deallocation.
 
 ```c++
 using BitType = unsigned long;
@@ -145,7 +147,7 @@ auto PushBack(bool const val) -> void {
 
 Initially, we note that we do not need to update the underlying storage at all in the event that a `false` value is inserted - only the metadata member `size_` needs to be updated. In the event that `true` is inserted into the `BitVector`, we follow the same procedure as before to isolate the bit of interest, and we write to the word in which it resides using the bitwise or (`|=`) operator.
 
-Now we have seen how we can read and write boolean values to our `BitVector` while only allocating each a single bit of storage space. The final piece of the puzzle is how we can return (possibly mutable) references to individual bits in our container. As noted earlier in this post, C++ offers us no mechanism by which we can address a location that consists of a single bit. This complicates the implementation of certain member functions, like `operator[]`. Consider what the prototype for this function might look like:
+Now we have seen how we can read and write boolean values to our `BitVector` while only allocating each a single bit of storage space. The final piece of the puzzle is the mechanism for returning (possibly mutable) references to individual bits in our container. As noted earlier in this post, C++ offers us no mechanism by which we can address a location that consists of a single bit. This complicates the implementation of certain member functions, like `operator[]`. Consider what the prototype for this function might look like:
 
 ```c++
 auto operator[](std::size_t index) -> ??? {
